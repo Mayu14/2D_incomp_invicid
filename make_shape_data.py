@@ -75,6 +75,29 @@ def make_shape_data_for_NACA4DIGIT_equidistant(path, data_Number, odd=True):
 
     np.savetxt(fname, save_data, delimiter=",")
 
+def prepare_for_crowd_front_and_back(len_front, len_back, percent_front, percent_back):
+    default_resolution = int((dataNumber - 1) / 2)
+
+    percent_center = 100 - (percent_front + percent_back)
+    len_center = 1.0 - (len_front + len_back)
+
+    # 各区間の点数
+    point_front = int(default_resolution * percent_front / 100)
+    point_back = int(default_resolution * percent_back / 100)
+    point_center = default_resolution - (point_front + point_back)
+
+    # 各区間での分割数を全区間に換算
+    divide_front = floor(point_front / len_front)
+    divide_center = floor(0.5 * (point_center + 2) / len_center) * 2
+    divide_back = floor(point_back / len_back)
+
+    side_margin = int((divide_center - point_center) / 2)
+    front_index = side_margin
+    back_index = divide_center - side_margin
+
+    half = int((dataNumber + 1) / 2)
+    return divide_front, divide_center, divide_back, point_front, point_center, point_back,\
+           percent_center, front_index, back_index, half
 
 def make_shape_data_for_NACA4DIGIT_crowd_front_and_back(path, data_Number, odd=True, len_front=0.1, len_back=0.15, percent_front=30, percent_back=20):
     # 前縁からlen_front*100%までの位置にpercent_front%の点，後縁からlen_back*100%までの位置にpercent_back%の点を配置する
@@ -101,27 +124,10 @@ def make_shape_data_for_NACA4DIGIT_crowd_front_and_back(path, data_Number, odd=T
         plt.show()
         exit()
 
-    default_resolution = int((dataNumber - 1)/2)
-
-    percent_center = 100 - (percent_front + percent_back)
-    len_center = 1.0 - (len_front + len_back)
-
-    # 各区間の点数
-    point_front = int(default_resolution * percent_front / 100)
-    point_back = int(default_resolution * percent_back / 100)
-    point_center = default_resolution - (point_front + point_back)
-
-    # 各区間での分割数を全区間に換算
-    divide_front = floor(point_front / len_front)
-    divide_center = floor(0.5 * (point_center + 2)/ len_center) * 2
-    divide_back = floor(point_back / len_back)
-
-    side_margin = int((divide_center - point_center) / 2)
-    front_index = side_margin
-    back_index = divide_center - side_margin
-
     kind_of_wing = 5000
-    half = int((dataNumber + 1) / 2)
+
+    divide_front, divide_center, divide_back, point_front, point_center, point_back, \
+    percent_center, front_index, back_index, half = prepare_for_crowd_front_and_back(len_front, len_back, percent_front, percent_back)
 
     casename = str(len_front) +"_" + str(len_back) +"_" +  str(percent_front) + "_" + str(percent_center) + "_" + str(percent_back)
     if odd == True:
@@ -206,6 +212,50 @@ def make_shape_data_for_NACA5DIGIT_equidistant(path, data_Number):
     np.savetxt(fname, save_data, delimiter=",")
 
 
+def make_shape_data_for_NACA5DIGIT_crowd_front_and_back(path, data_Number, len_front=0.1, len_back=0.15,
+                                                        percent_front=30, percent_back=20):
+    kind_of_wing = 9 * 99
+
+    divide_front, divide_center, divide_back, point_front, point_center, point_back, \
+    percent_center, front_index, back_index, half = prepare_for_crowd_front_and_back(len_front, len_back, percent_front,
+                                                                                     percent_back)
+
+    casename = str(len_front) + "_" + str(len_back) + "_" + str(percent_front) + "_" + str(percent_center) + "_" + str(
+        percent_back)
+
+    fname = path + "NACA5\\shape_crowd_" + casename + "_all.csv"
+    pattern = kind_of_wing
+
+    save_data = np.zeros((pattern, data_Number))
+    head_int3 = [210, 220, 230, 240, 250, 221, 231, 241, 251]
+    data_id = 0
+    for int3 in head_int3:
+        for int2 in range(1, 100):
+            naca5 = str(int3) + str(int2).zfill(2)
+            save_data[data_id, 0] = float(naca5)
+            nacaf = Naca_5_digit(int_5=naca5, attack_angle_deg=0.0, resolution=divide_front, quasi_equidistant=True,
+                                length_adjust=True)
+            nacac = Naca_5_digit(int_5=naca5, attack_angle_deg=0.0, resolution=divide_center, quasi_equidistant=True,
+                                 length_adjust=True)
+            nacab = Naca_5_digit(int_5=naca5, attack_angle_deg=0.0, resolution=divide_back, quasi_equidistant=True,
+                                 length_adjust=True)
+
+            y_uf = nacaf.equidistant_y_u[::-1] - 0.5
+            y_uc = nacac.equidistant_y_u[::-1] - 0.5
+            y_ub = nacab.equidistant_y_u[::-1] - 0.5
+
+            save_data[data_id, 1:half] = np.concatenate(
+                [y_ub[:point_back], y_uc[front_index + 1:back_index + 1], y_uf[divide_front - point_front:]])
+
+            save_data[data_id, half:] = np.concatenate([(nacaf.equidistant_y_l - 0.5)[:point_front],
+                                                        (nacac.equidistant_y_l - 0.5)[front_index - 1:back_index - 1],
+                                                        (nacab.equidistant_y_l - 0.5)[divide_back - point_back:]])
+            data_id += 1
+            # plot_test()
+
+    np.savetxt(fname, save_data, delimiter=",")
+
+
 if __name__ == '__main__':
     path = "D:\\Toyota\\Data\\Incompressible_Invicid\\training_data\\"
     dataNumber = 200 + 1
@@ -214,7 +264,8 @@ if __name__ == '__main__':
     # make_shape_data_for_NACA4DIGIT_equidistant(path, dataNumber, odd)
     # make_shape_data_for_NACA4DIGIT_crowd_front_and_back(path, dataNumber, odd)
     # make_shape_data_for_NACA5DIGIT_fourier(path, dataNumber)
-    make_shape_data_for_NACA5DIGIT_equidistant(path, dataNumber)
+    # make_shape_data_for_NACA5DIGIT_equidistant(path, dataNumber)
+    make_shape_data_for_NACA5DIGIT_crowd_front_and_back(path, dataNumber)
 
     # 没プログラムのコーナー
     # 3つの小数について，丸めた際の最小公倍数が最小になるように切り上げ､切り捨てを判定するプログラム
