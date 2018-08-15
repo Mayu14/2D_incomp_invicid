@@ -10,6 +10,7 @@ import keras.backend.tensorflow_backend as KTF
 import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 from read_training_data import read_csv_type3
 
 def batch_iter(data, labels, batch_size, shuffle=True):
@@ -36,18 +37,45 @@ def batch_iter(data, labels, batch_size, shuffle=True):
 
     return num_batches_per_epoch, data_generator()
 
-def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_type=3, env="Lab"):
+def save_my_log(source, case_number, fname_lift_train, fname_shape_train, model_sum):
+    with open(source + str(case_number).zfill(4) + "_log.txt", "w") as f:
+        f.write("case number :" + str(case_number).zfill((3)))
+        f.write("training_data of Lift :" + fname_lift_train)
+        f.write("training_data of Shape :" + fname_shape_train)
+        f.write("model summary")
+        f.write(model_sum)
+
+def get_case_number(source, env, case_number):
+    flag = 0
+    source = source + "learned\\"
+    if env == "Colab":
+        source = source.reshape("\\", "/")
+        case_number += 10000
+    while flag == 0:
+        if os.path.exists(source + str(case_number).zfill(5) + "_mlp_model_.json"):
+            case_number += 1
+        else:
+            flag = 1
+    return str(case_number).zfill(5)
+
+def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env="Lab"):
     old_session = KTF.get_session()
 
     with tf.Graph().as_default():
+        source = "Incompressible_Invicid\\training_data\\"
         if env == "Lab":
-            source = "D:\\Toyota\\Data\\Incompressible_Invicid\\training_data\\"
-            log_name = "\\log.hdf5"
-            json_name = "\\dnn_model.json"
+            source = "D:\\Toyota\\Data\\" + source
+            case_num = get_case_number(source, env, case_number)
+            log_name = "learned\\" + case_num + "_tb_log.hdf5"
+            json_name = "learned\\" + case_num + "_mlp_model_.json"
+            weight_name = "learned\\" + case_num + "_mlp_weight.h5"
         elif env == "Colab":
-            source = "/content/drive/Colab Notebooks/Incompressible_Invicid/training_data/"
-            log_name = "/log.hdf5"
-            json_name = "/dnn_model.json"
+            source = "/content/drive/Colab Notebooks/" + source.replace("\\", "/")
+            case_num = get_case_number(source, env, case_number)
+            log_name = "learned/" + case_num + "_log.hdf5"
+            json_name = "learned/" + case_num + "_mlp_model_.json"
+            weight_name = "learned/" + case_num + "_mlp_weight.h5"
+
         session = tf.Session('')
         KTF.set_session(session)
         KTF.set_learning_phase(1)
@@ -87,10 +115,10 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
             model.add(Dense(units=1))
 
         model.summary()
-        log_path = source + "tensorlog" + log_name   # "D:\\Dropbox\\shareTH\\program\\keras_training"
 
+        save_my_log(source, case_number, fname_lift_train, fname_shape_train, model.summary())
         # es_cb = EarlyStopping(monitor='val_loss', patience=0, verbose=0, mode='auto')
-        tb_cb = TensorBoard(log_dir=log_path, histogram_freq=0, write_grads=True)
+        tb_cb = TensorBoard(log_dir=source + log_name, histogram_freq=0, write_grads=True)
 
         model.compile(loss="mean_squared_error",
                       optimizer='Adam')
@@ -114,31 +142,46 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
         tekito = 1306 * 40  # NACA2613 or NACA2615
         plt.plot(X_train[tekito:tekito+40, 0], y_train[tekito:tekito+40])
         plt.plot(X_train[tekito:tekito+40, 0], model.predict(X_train)[tekito:tekito+40])
-        plt.savefig("train.png")
+        plt.savefig(case_num + "_train.png")
 
         y_predict = model.predict(x_test)
         tekito = (99 + 13) * 40 # 22012
         plt.plot(x_test[tekito:tekito+40, 0], y_test[tekito:tekito+40])
         plt.plot(x_test[tekito:tekito+40, 0], y_predict[tekito:tekito+40])
-        plt.savefig("test.png")
+        plt.savefig(case_num + "_test.png")
 
     json_string = model.to_json()
-    open(log_path + json_name, 'w').write(json_string)
+    open(source + json_name, 'w').write(json_string)
+    model.save_weights(source + weight_name)
     KTF.set_session(old_session)
 
 
 if __name__ == '__main__':
     env = "Lab"
     # env = "Colab"
-
     fname_lift_train = "NACA4\\s0000_e5000_a040_odd.csv"
-    fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
     fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
-    fname_shape_test = "NACA5\\shape_fourier_all.csv"
+
+    shape_type = "fourier"
+    if shape_type == "fourier":
+        fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
+        fname_shape_test = "NACA5\\shape_fourier_all.csv"
+        case_number = 0
+    elif shape_type == "equidistant":
+        # fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
+        # fname_shape_test = "NACA5\\shape_fourier_all.csv"
+        case_number = 1000
+        exit()
+    elif shape_type == "dense":
+        # fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
+        # fname_shape_test = "NACA5\\shape_fourier_all.csv"
+        case_number = 2000
+        exit()
+
     if env == "Colab":
         fname_lift_train = fname_lift_train.replace("\\", "/")
         fname_shape_train = fname_shape_train.replace("\\", "/")
         fname_lift_test = fname_lift_test.replace("\\", "/")
         fname_shape_test = fname_shape_test.replace("\\", "/")
 
-    main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_type=3, env=env)
+    main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env=env)
