@@ -163,7 +163,7 @@ if __name__ == '__main__':
     fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
 
     # shape_type = "fourier"
-    shape_type = "dense"
+    shape_type = "equidistant"
     
     if shape_type == "fourier":
         fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
