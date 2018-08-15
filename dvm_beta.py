@@ -186,7 +186,7 @@ def main():
     naca4 = "6633"
     inflow = 1.0
     alpha = 0.0
-    type = 3
+    type = 0
     complex_U = get_complex_U(inflow_velocity = inflow, attack_angle_degree = alpha)
 
     z, size = get_complex_coords(type, size, center_x, center_y, naca4)
@@ -195,6 +195,7 @@ def main():
     lift = get_lift(density = 1.0, circulation = circulation, complex_U = complex_U)
     lift_coef = get_lift_coefficient(z, circulation, complex_U)
     print(lift, lift_coef)
+    exit()
     # print(lift, lift_coef, validation(type, center_x, center_y, complex_U))
 
     path = "D:\\Toyota\\Data\\DVM_mk7\\"
