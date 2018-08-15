@@ -49,7 +49,7 @@ def get_case_number(source, env, case_number):
     flag = 0
     source = source + "learned\\"
     if env == "Colab":
-        source = source.reshape("\\", "/")
+        source = source.replace("\\", "/")
         case_number += 10000
     while flag == 0:
         if os.path.exists(source + str(case_number).zfill(5) + "_mlp_model_.json"):
