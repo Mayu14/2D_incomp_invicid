@@ -157,28 +157,37 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
 
 
 if __name__ == '__main__':
-    env = "Lab"
-    # env = "Colab"
+    env_in = input("Please set envirionment: 0:Lab, 1:Colab")
+    if env_in == str(0):
+        env = "Lab"
+    elif env_in == str(1):
+        env = "Colab"
+    else:
+        print("env_error")
+        exit()
+
+    shape_type = input("please set shape_type: 0:fourier, 1:equidistant, 2:dense")
+
     fname_lift_train = "NACA4\\s0000_e5000_a040_odd.csv"
     fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
 
-    # shape_type = "fourier"
-    shape_type = "equidistant"
-    
-    if shape_type == "fourier":
+    if shape_type == str(0):
         fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
         fname_shape_test = "NACA5\\shape_fourier_all.csv"
         case_number = 0
 
-    elif shape_type == "equidistant":
+    elif shape_type == str(1):
         fname_shape_train = "NACA4\\shape_equidistant_5000_odd.csv"
         fname_shape_test = "NACA5\\shape_equidistant_all.csv"
         case_number = 1000
 
-    elif shape_type == "dense":
+    elif shape_type == str(2):
         fname_shape_train = "NACA4\\shape_crowd_0.1_0.15_30_50_20_5000_odd.csv"
         fname_shape_test = "NACA5\\shape_crowd_0.1_0.15_30_50_20_all.csv"
         case_number = 2000
+    else:
+        print("shape_type error")
+        exit()
 
     if env == "Colab":
         fname_lift_train = fname_lift_train.replace("\\", "/")
