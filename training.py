@@ -39,11 +39,11 @@ def batch_iter(data, labels, batch_size, shuffle=True):
 
 def save_my_log(source, case_number, fname_lift_train, fname_shape_train, model_sum):
     with open(source + str(case_number).zfill(4) + "_log.txt", "w") as f:
-        f.write("case number :" + str(case_number).zfill((3)))
-        f.write("training_data of Lift :" + fname_lift_train)
-        f.write("training_data of Shape :" + fname_shape_train)
-        f.write("model summary")
-        f.write(model_sum)
+        f.write("case number :" + str(case_number).zfill((3)) + "\n")
+        f.write("training_data of Lift :" + fname_lift_train + "\n")
+        f.write("training_data of Shape :" + fname_shape_train + "\n")
+        f.write("model summary" + "\n")
+        f.write(str(model_sum) + "\n")
 
 def get_case_number(source, env, case_number):
     flag = 0
@@ -142,13 +142,13 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
         tekito = 1306 * 40  # NACA2613 or NACA2615
         plt.plot(X_train[tekito:tekito+40, 0], y_train[tekito:tekito+40])
         plt.plot(X_train[tekito:tekito+40, 0], model.predict(X_train)[tekito:tekito+40])
-        plt.savefig(case_num + "_train.png")
+        plt.savefig(source + case_num + "_train.png")
 
         y_predict = model.predict(x_test)
         tekito = (99 + 13) * 40 # 22012
         plt.plot(x_test[tekito:tekito+40, 0], y_test[tekito:tekito+40])
         plt.plot(x_test[tekito:tekito+40, 0], y_predict[tekito:tekito+40])
-        plt.savefig(case_num + "_test.png")
+        plt.savefig(source + case_num + "_test.png")
 
     json_string = model.to_json()
     open(source + json_name, 'w').write(json_string)
@@ -162,7 +162,8 @@ if __name__ == '__main__':
     fname_lift_train = "NACA4\\s0000_e5000_a040_odd.csv"
     fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
 
-    shape_type = "fourier"
+    # shape_type = "fourier"
+    shape_type = "dense"
     
     if shape_type == "fourier":
         fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
