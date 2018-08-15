@@ -182,14 +182,7 @@ def make_shape_data_for_NACA5DIGIT_fourier(path, data_Number):
     np.savetxt(fname, save_data, delimiter=",")
 
 
-def make_shape_data_for_NACA5DIGIT_equidistant(path, data_Number, odd=True):
-    def plot_test():
-        x = np.linspace(start=-1, stop=1, num=2 * resolution)
-        plt.plot(x[:resolution], save_data[wing, 1:half])
-        plt.plot(x[resolution:], save_data[wing, half:])
-        plt.show()
-        exit()
-
+def make_shape_data_for_NACA5DIGIT_equidistant(path, data_Number):
     resolution = int((dataNumber - 1)/2)
     kind_of_wing = 9 * 99
     half = int((dataNumber + 1)/2)
@@ -220,7 +213,8 @@ if __name__ == '__main__':
     # make_shape_data_for_NACA4DIGIT_fourier(path, dataNumber, odd)
     # make_shape_data_for_NACA4DIGIT_equidistant(path, dataNumber, odd)
     # make_shape_data_for_NACA4DIGIT_crowd_front_and_back(path, dataNumber, odd)
-    make_shape_data_for_NACA5DIGIT_fourier(path, dataNumber)
+    # make_shape_data_for_NACA5DIGIT_fourier(path, dataNumber)
+    make_shape_data_for_NACA5DIGIT_equidistant(path, dataNumber)
 
     # 没プログラムのコーナー
     # 3つの小数について，丸めた際の最小公倍数が最小になるように切り上げ､切り捨てを判定するプログラム
