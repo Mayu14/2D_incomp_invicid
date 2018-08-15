@@ -157,7 +157,8 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
 
 
 if __name__ == '__main__':
-    env_in = input("Please set envirionment: 0:Lab, 1:Colab")
+    # env_in = input("Please set envirionment: 0:Lab, 1:Colab")
+    env_in = str(1)
     if env_in == str(0):
         env = "Lab"
     elif env_in == str(1):
@@ -166,8 +167,8 @@ if __name__ == '__main__':
         print("env_error")
         exit()
 
-    shape_type = input("please set shape_type: 0:fourier, 1:equidistant, 2:dense")
-
+    # shape_type = input("please set shape_type: 0:fourier, 1:equidistant, 2:dense")
+    shape_type = str(1)
     fname_lift_train = "NACA4\\s0000_e5000_a040_odd.csv"
     fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
 
