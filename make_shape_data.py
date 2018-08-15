@@ -182,6 +182,36 @@ def make_shape_data_for_NACA5DIGIT_fourier(path, data_Number):
     np.savetxt(fname, save_data, delimiter=",")
 
 
+def make_shape_data_for_NACA5DIGIT_equidistant(path, data_Number, odd=True):
+    def plot_test():
+        x = np.linspace(start=-1, stop=1, num=2 * resolution)
+        plt.plot(x[:resolution], save_data[wing, 1:half])
+        plt.plot(x[resolution:], save_data[wing, half:])
+        plt.show()
+        exit()
+
+    resolution = int((dataNumber - 1)/2)
+    kind_of_wing = 9 * 99
+    half = int((dataNumber + 1)/2)
+
+    fname = path + "NACA5\\shape_equidistant_all.csv"
+    pattern = kind_of_wing
+
+    save_data = np.zeros((pattern, data_Number))
+    head_int3 = [210, 220, 230, 240, 250, 221, 231, 241, 251]
+    data_id = 0
+    for int3 in head_int3:
+        for int2 in range(1, 100):
+            naca5 = str(int3) + str(int2).zfill(2)
+            save_data[data_id, 0] = float(naca5)
+            naca = Naca_5_digit(int_5=naca5, attack_angle_deg=0.0, resolution=resolution, quasi_equidistant=True, length_adjust = True)
+            # 後縁から反時計まわりに格納
+            save_data[data_id, 1:half] = naca.equidistant_y_u[::-1] - 0.5
+            save_data[data_id, half:] = naca.equidistant_y_l - 0.5
+            data_id += 1
+
+    np.savetxt(fname, save_data, delimiter=",")
+
 
 if __name__ == '__main__':
     path = "D:\\Toyota\\Data\\Incompressible_Invicid\\training_data\\"
