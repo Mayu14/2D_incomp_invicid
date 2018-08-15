@@ -163,20 +163,21 @@ if __name__ == '__main__':
     fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
 
     shape_type = "fourier"
+    
     if shape_type == "fourier":
         fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
         fname_shape_test = "NACA5\\shape_fourier_all.csv"
         case_number = 0
+
     elif shape_type == "equidistant":
-        # fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
-        # fname_shape_test = "NACA5\\shape_fourier_all.csv"
+        fname_shape_train = "NACA4\\shape_equidistant_5000_odd.csv"
+        fname_shape_test = "NACA5\\shape_equidistant_all.csv"
         case_number = 1000
-        exit()
+
     elif shape_type == "dense":
-        # fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
-        # fname_shape_test = "NACA5\\shape_fourier_all.csv"
+        fname_shape_train = "NACA4\\shape_crowd_0.1_0.15_30_50_20_5000_odd.csv"
+        fname_shape_test = "NACA5\\shape_crowd_0.1_0.15_30_50_20_all.csv"
         case_number = 2000
-        exit()
 
     if env == "Colab":
         fname_lift_train = fname_lift_train.replace("\\", "/")
