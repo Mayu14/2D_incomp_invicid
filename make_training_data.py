@@ -26,13 +26,16 @@ def stop_watch(func):
 
 @stop_watch
 @jit
-def calc_lift_coef(odd, number, inflow, type, fixed_size, kind_of_wing, kind_of_angle, step_of_angle):
+def calc_lift_coef(odd, number, inflow, type, fixed_size, kind_of_wing, kind_of_angle, step_of_angle, min_angle=None):
     # save_data[id, 0] = wing_type  # 1:joukowski, 2:karman-trefftz, 3:naca4digit
     # save_data[id, 1] = shape_data_1 : if type=1 or type=2 => center_x, elseif type=3 => NACA-4-DigitNumber
     # save_data[id, 2] = shape_data_2 : if type=1 or type=2 => center_y, elseif type=3 => Not use
     # save_data[id, 3] = attack_angle
     # save_data[id, 4] = lift_coefficient
-    
+
+    if min_angle == None:
+        min_angle = - (2.0 * kind_of_angle) / step_of_angle
+
     if odd == True:
         nextnum = odd_number
         endword = "_odd"
@@ -67,7 +70,7 @@ def calc_lift_coef(odd, number, inflow, type, fixed_size, kind_of_wing, kind_of_
                 copy_data_id = data_id
                 for angle in range(kind_of_angle):
                     # save_data[data_id, 3] = step_of_angle * angle - kind_of_angle  # attack_angle_deg
-                    angle_and_lift[angle, 0] = step_of_angle * angle - kind_of_angle # attack_angle_deg
+                    angle_and_lift[angle, 0] = step_of_angle * angle - min_angle # attack_angle_deg
                     complex_U = dvm.get_complex_U(inflow_velocity = inflow, attack_angle_degree = angle_and_lift[angle, 0])
                     circulation = dvm.get_circulation(z, complex_U, gamma_output = False)
                     # save_data[data_id, 4] = dvm.get_lift_coefficient(z, circulation, complex_U)
@@ -103,18 +106,21 @@ def make_training_data_for_NACA5DIGIT(path):
     kind_of_wing = 99 * 9
 
     kind_of_angle = 40  # 40
-    step_of_angle = 2
+    step_of_angle = 0.75
+    min_angle = 0
 
     data_number_per_wing = 5
-    calc_lift_coef_NACA5DIGIT(data_number_per_wing, inflow, type, size, kind_of_wing, kind_of_angle, step_of_angle)
+    calc_lift_coef_NACA5DIGIT(data_number_per_wing, inflow, type, size, kind_of_wing, kind_of_angle, step_of_angle, min_angle)
 
 
-def calc_lift_coef_NACA5DIGIT(number, inflow, type, fixed_size, kind_of_wing, kind_of_angle, step_of_angle):
+def calc_lift_coef_NACA5DIGIT(number, inflow, type, fixed_size, kind_of_wing, kind_of_angle, step_of_angle, min_angle=None):
     # save_data[id, 0] = wing_type  # 1:joukowski, 2:karman-trefftz, 3:naca4digit
     # save_data[id, 1] = shape_data_1 : if type=1 or type=2 => center_x, elseif type=3 => NACA-4-DigitNumber
     # save_data[id, 2] = shape_data_2 : if type=1 or type=2 => center_y, elseif type=3 => Not use
     # save_data[id, 3] = attack_angle
     # save_data[id, 4] = lift_coefficient
+    if min_angle == None:
+        min_angle = - (2.0 * kind_of_angle) / step_of_angle
 
     save_data = np.zeros((kind_of_wing * kind_of_angle, number), dtype=float)
     save_data[:, 0] = type
@@ -131,7 +137,7 @@ def calc_lift_coef_NACA5DIGIT(number, inflow, type, fixed_size, kind_of_wing, ki
 
             copy_data_id = data_id
             for angle in range(kind_of_angle):
-                angle_and_lift[angle, 0] = step_of_angle * angle - kind_of_angle  # attack_angle_deg
+                angle_and_lift[angle, 0] = step_of_angle * angle - min_angle  # attack_angle_deg
                 complex_U = dvm.get_complex_U(inflow_velocity=inflow, attack_angle_degree=angle_and_lift[angle, 0])
                 circulation = dvm.get_circulation(z, complex_U, gamma_output=False)
                 angle_and_lift[angle, 1] = dvm.get_lift_coefficient(z, circulation, complex_U)
