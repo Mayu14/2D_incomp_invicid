@@ -14,6 +14,7 @@ def read_csv_type3(source, fpath_lift, fpath_shape, shape_odd = 0, read_rate = 1
         odd_num = lambda index: (2 * index) + 1
         even_num = lambda index: (index + 1) * 2
         original_num = lambda index: index + 1
+        skip_n_num = lambda index: (rate * index) + 1
 
         if((shape_odd != 0) and (rate == 1) or (rate == 0)):
             print("rate error!")
@@ -25,6 +26,8 @@ def read_csv_type3(source, fpath_lift, fpath_shape, shape_odd = 0, read_rate = 1
             next = even_num
         elif shape_odd == 3:  # 並び順は同じだけど，数は半分
             next = original_num
+        elif shape_odd == 4:
+            next = skip_n_num   # 最後まで読むけどrateごとにスキップ
         else:   # 元々のまま読み出す
             next = original_num
             num = data
