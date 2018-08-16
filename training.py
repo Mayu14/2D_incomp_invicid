@@ -149,12 +149,14 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
             # y_train: [number, lift]
             # 適当に中央付近の翼を抜き出しての-40-38degreeをプロットさせてみる
             tekito = 1306 * 40  # NACA2613 or NACA2615
+            plt.figure()
             plt.plot(X_train[tekito:tekito+40, 0], y_train[tekito:tekito+40])
             plt.plot(X_train[tekito:tekito+40, 0], model.predict(X_train)[tekito:tekito+40])
             plt.savefig(source + case_num + "_train.png")
 
             y_predict = model.predict(x_test)
             tekito = (99 + 13) * 40 # 22012
+            plt.figure()
             plt.plot(x_test[tekito:tekito+40, 0], y_test[tekito:tekito+40])
             plt.plot(x_test[tekito:tekito+40, 0], y_predict[tekito:tekito+40])
             plt.savefig(source + case_num + "_test.png")
