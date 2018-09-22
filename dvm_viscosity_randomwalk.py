@@ -17,6 +17,7 @@ class VortexElement(object):
         self.circulation = circulation
         self.coordinate_z0 = coordinate # old_coordinate
         self.coordinate_z1 = coordinate # new_coordinate
+
         self.radius = radius
 
         self.coordinate = self.coordinate_z1
@@ -36,7 +37,6 @@ class VortexElement(object):
     # 登録された座標を反映する
     def update_new_coordinate(self):
         self.coordinate = self.coordinate_z1
-
 
 class VortexControl(object):
     def __init__(self, z, complex_U):
@@ -62,10 +62,16 @@ class VortexControl(object):
         self.max_len = np.max(self.len) # パネル長のうち最大のもの
         self.outer_area = 2.0 * np.abs(max(np.max(np.real(z)) - np.min(np.real(z)), np.max(np.imag(z)) - np.min(np.imag(z)))) # 物体の長軸方向の2倍
         self.object_center = 0.5 * ((np.max(np.real(z)) + np.min(np.real(z))) + 1.0j * (np.max(np.imag(z)) + np.min(np.imag(z))))   # 物体の中心座標
+
+        eps = 0.05
+        self.left_bound = np.min(np.real(z)) - eps
+        self.right_bound = np.max(np.real(z)) + eps
+        self.top_bound = np.max(np.imag(z)) + eps
+        self.bottom_bound = np.min(np.imag(z)) - eps
         # パネルごとの単位時間あたりの循環生成量
         self.time_derivative_of_circulation = np.zeros(self.p_size)
 
-        self.no_invQ = True
+        self.no_invQ = False    # True
         self.set_qr_decomposition(self.no_invQ)
 
         # 初期化が必要な変数
@@ -120,7 +126,7 @@ class VortexControl(object):
                 self.merge_vortex() # 渦要素を結合する
                 # print(self.number)
                 residual = self.get_aero_characteristics()  # 空力特性を計算し，残差を求める
-                # print(self.lift, self.drag)
+                print(self.lift, self.drag)
 
 
     # 渦要素の循環の合計値を求めるメソッド(O(Nv))
@@ -185,10 +191,11 @@ class VortexControl(object):
         inv_delta = - self.delta  # 各パネル単点間の距離(物体を右回りする際の接線ベクトルとしている点に注意)
         len = self.len  # パネルの長さ(論文中のlj)
 
-        generate_point = self.delta / (1j * np.pi)  # 渦要素を配置する座標  [1](20)式に基づく
+        generate_point = self.delta / (1j * np.pi)  # 渦要素を配置する座標(パネル中心からの相対距離)  [1](20)式に基づく
 
         for i in range(p_size): # 全パネルに関するループ
             tangent_velocity = self.get_velocity_from_vortex(z_ref=ref[i], dist_vector=inv_delta[i])    # 右回り接線方向速度
+            # print(tangent_velocity)
             if tangent_velocity > self.machine_zero:
                 tmpCirculation = tangent_velocity * len[i]  # 必要な循環値
                 self.time_derivative_of_circulation[i] = tmpCirculation    # 単位時間当たりのパネルから生じる循環の強さ [1](21)式右辺第2項
@@ -199,8 +206,8 @@ class VortexControl(object):
 
                 new_coordinate = ref[i] + generate_point[i] # 渦要素を生成する座標
                 for new_vortex in range(number):    # 新規追加する渦要素の数だけループ
-                    self.add_Vortex(new_circulation, new_coordinate, generate_point[i]) # 半径として参照点と渦要素の初期位置との距離をそのまま採用(次ステップで物体から離れる方向へ移動しなければ渦要素は消滅する)
-
+                    self.add_Vortex(new_circulation, new_coordinate, np.abs(generate_point[i])) # 半径として参照点と渦要素の初期位置との距離をそのまま採用(次ステップで物体から離れる方向へ移動しなければ渦要素は消滅する)
+        # exit()
 
     # 子リストの追加メソッド
     def make_new_child_list(self):
@@ -213,13 +220,11 @@ class VortexControl(object):
     # 渦要素の追加メソッド
     def add_Vortex(self, circulation, coordinate, radius):
         self.number += 1
-
         if self.len_list[self.current_child] >= self.limit_for_elements_of_list:    # リスト内の渦要素数が上限に達していた場合
             self.make_new_child_list()  # 新たに子リストを作成する
         self.len_list[self.current_child] += 1
         # list = self.parent_list[self.current_child]対象
         # list.append(VortexElement(circulation, coordinate, radius))
-
         self.parent_list[self.current_child].append(VortexElement(circulation, coordinate, radius))
 
     # 子リスト・idを指定して渦要素を削除対象として登録するメソッド
@@ -279,15 +284,35 @@ class VortexControl(object):
 
     # 結合処理の対象となる要素を検索する
     def merge_vortex(self):
-        # 物体から十分離れている要素を削除対象とする(円の外に出たら結合対象)
+        self.boundary_sphere = False
+
         count = 0
-        for child in range(self.child_list_num):
-            child_list = self.parent_list[child]
-            for id in range(self.len_list[child]):
-                difference = child_list[id].coordinate - self.object_center
-                if (abs(difference) > self.outer_area):
-                    self.register_merge_target(child, id, phase(difference))    # 渦要素が物体遠方に存在するとき，結合可能として登録
-                    count += 1
+        if self.boundary_sphere:
+        # 物体から十分離れている要素を削除対象とする(円の外に出たら結合対象)
+            for child in range(self.child_list_num):
+                child_list = self.parent_list[child]
+                for id in range(self.len_list[child]):
+                    difference = child_list[id].coordinate - self.object_center
+                    if (abs(difference) > self.outer_area):
+                        self.register_merge_target(child, id, phase(difference))    # 渦要素が物体遠方に存在するとき，結合可能として登録
+                        count += 1
+        else:
+            def check_box(z):
+                if ((np.real(z) < left) or (right < np.real(z)) or (np.imag(z) < bottom) or (top < np.imag(z))):
+                    return True
+                else:
+                    return False
+
+            left = self.left_bound
+            right = self.right_bound
+            top = self.top_bound
+            bottom = self.bottom_bound
+            for child in range(self.child_list_num):
+                child_list = self.parent_list[child]
+                for id in range(self.len_list[child]):
+                    if check_box(child_list[id].coordinate):
+                        self.register_merge_target(child, id, phase(child_list[id].coordinate - self.object_center))  # 渦要素が指定領域の外に存在するとき，結合可能として登録
+                        count += 1
 
         # numpy_arrayに変換
         merge_list = np.array(self.merge_list).reshape(-1, 3)
@@ -342,6 +367,12 @@ class VortexControl(object):
 
 
     def get_circulation_on_panel(self):
+        def back_substitution(r, qb, N):
+            x = np.zeros(N)
+            for i in range(N - 1, -1, -1):
+                x[i] = qb[i] - np.sum(np.dot(r, x))
+            return x
+
         for i in range(self.p_size):
             self.b[i] = self.get_velocity_from_vortex(self.ref[i], dist_vector=-self.delta[i])
 
@@ -351,7 +382,8 @@ class VortexControl(object):
             self.gamma = np.dot(self.invtA3, self.b)
 
         else:
-            self.gamma = linalg.solve(self.R, np.dot(self.invQ, self.b))
+            # self.gamma = linalg.solve(self.R, np.dot(self.invQ, self.b))
+            self.gamma = back_substitution(self.R, np.dot(self.invQ, self.b), self.p_size)
 
 
     def __get_pressure_on_panel(self):
