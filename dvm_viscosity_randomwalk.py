@@ -5,7 +5,7 @@ from dvm_beta import get_complex_coords, get_complex_U
 from math import sqrt, ceil
 from cmath import phase
 from random import gauss
-
+import matplotlib.pyplot as plt
 """
 参考文献
 [1] 三上, 宮本, 安藤, "渦法によるはく離流れの解析 -回転円柱および回転円筒部をもつ翼まわりの流れ-", ながれ 12, (1993), pp.31-45
@@ -46,7 +46,7 @@ class VortexControl(object):
 
         self.parent_list = [[]]   # child_listのリスト
         self.len_list = [0]  # child_listの現在の要素数
-        self.deletion_list = []   # 削除対象のリスト
+        self.deletion_list = [[]]   # 削除対象のリスト
         self.merge_list = []    # 結合対象のリスト
 
         self.set_config()
@@ -124,9 +124,10 @@ class VortexControl(object):
                 self.complete_move_vortex()  # 移動を反映する
                 
                 self.merge_vortex() # 渦要素を結合する
-                # print(self.number)
+
                 residual = self.get_aero_characteristics()  # 空力特性を計算し，残差を求める
                 print(self.lift, self.drag)
+                # self.plot_velocity_field()
 
 
     # 渦要素の循環の合計値を求めるメソッド(O(Nv))
@@ -195,7 +196,6 @@ class VortexControl(object):
 
         for i in range(p_size): # 全パネルに関するループ
             tangent_velocity = self.get_velocity_from_vortex(z_ref=ref[i], dist_vector=inv_delta[i])    # 右回り接線方向速度
-            # print(tangent_velocity)
             if tangent_velocity > self.machine_zero:
                 tmpCirculation = tangent_velocity * len[i]  # 必要な循環値
                 self.time_derivative_of_circulation[i] = tmpCirculation    # 単位時間当たりのパネルから生じる循環の強さ [1](21)式右辺第2項
@@ -207,7 +207,7 @@ class VortexControl(object):
                 new_coordinate = ref[i] + generate_point[i] # 渦要素を生成する座標
                 for new_vortex in range(number):    # 新規追加する渦要素の数だけループ
                     self.add_Vortex(new_circulation, new_coordinate, np.abs(generate_point[i])) # 半径として参照点と渦要素の初期位置との距離をそのまま採用(次ステップで物体から離れる方向へ移動しなければ渦要素は消滅する)
-        # exit()
+
 
     # 子リストの追加メソッド
     def make_new_child_list(self):
@@ -240,8 +240,9 @@ class VortexControl(object):
 
     # 削除対象として登録された渦要素を一括で削除するためのメソッド
     def del_Vortex(self):
-        for child in range(self.child_list_num):    # 全部の子リストについてループ
-            if not self.deletion_list[child]:   # 削除対象の渦要素が1つ以上含まれるとき
+        # if self.deletion_list != []:
+        for child in range(self.child_list_num + 1):    # 全部の子リストについてループ
+            if not self.deletion_list[child] == False:   # 削除対象の渦要素が1つ以上含まれるとき
                 target_id = np.sort(np.array(self.deletion_list[child]))[::-1]   # ndarrayに変換し，idの大きい順に並び替える
 
                 for id in target_id:    # 大きい順に並べ替えたので後ろから削除するだけ
@@ -270,13 +271,16 @@ class VortexControl(object):
         def merge_radius(r1, r2):
             return sqrt(r1**2 + r2**2)
 
-        child1 = vortex_info1[0]
-        child2 = vortex_info2[0]
-        id1 = vortex_info1[1]
-        id2 = vortex_info2[1]
+        child1 = int(vortex_info1[0])
+        child2 = int(vortex_info2[0])
+        id1 = int(vortex_info1[1])
+        id2 = int(vortex_info2[1])
 
-        g1, z1, r1 = self.parent_list[child1][id1].get_vortex_data
-        g2, z2, r2 = self.parent_list[child2][id2].get_vortex_data
+
+        # g1, z1, r1 = self.parent_list[child1][id1].get_vortex_data
+        # g2, z2, r2 = self.parent_list[child2][id2].get_vortex_data
+        g1, z1, r1 = self.parent_list[child1][id1].circulation, self.parent_list[child1][id1].coordinate, self.parent_list[child1][id1].radius
+        g2, z2, r2 = self.parent_list[child2][id2].circulation, self.parent_list[child2][id2].coordinate, self.parent_list[child2][id2].radius
 
         self.register_deletion_target(child1, id1)
         self.register_deletion_target(child2, id2)
@@ -289,7 +293,7 @@ class VortexControl(object):
         count = 0
         if self.boundary_sphere:
         # 物体から十分離れている要素を削除対象とする(円の外に出たら結合対象)
-            for child in range(self.child_list_num):
+            for child in range(self.child_list_num + 1):
                 child_list = self.parent_list[child]
                 for id in range(self.len_list[child]):
                     difference = child_list[id].coordinate - self.object_center
@@ -307,7 +311,7 @@ class VortexControl(object):
             right = self.right_bound
             top = self.top_bound
             bottom = self.bottom_bound
-            for child in range(self.child_list_num):
+            for child in range(self.child_list_num + 1):
                 child_list = self.parent_list[child]
                 for id in range(self.len_list[child]):
                     if check_box(child_list[id].coordinate):
@@ -344,12 +348,14 @@ class VortexControl(object):
         z_size = self.p_size
         edge_max = self.max_len
 
-        for child in range(self.child_list_num):    # 全部の子リストについてループ
+
+        for child in range(self.child_list_num + 1):    # 全部の子リストについてループ
             child_list = self.parent_list[child]
             for id in range(self.len_list[child]):    # 子リスト内全要素についてループ
                 vortex = child_list[id]
                 # 各辺の中点を中心とした辺の長さを直径とする円と，座標移動の軌跡の中点を中心とした渦直径を半径とする円とが接触する場所を検索
                 candidate = np.argwhere(np.abs(z_ref - vortex.locus_center) < 0.5 * edge_max + 2.0 * vortex.radius)
+
                 # 移動の両端
                 p1 = vortex.coordinate_z0
                 p2 = vortex.coordinate_z1
@@ -441,6 +447,17 @@ class VortexControl(object):
             Q, self.R = linalg.qr(A)
             self.invQ = Q.T
         self.b = np.zeros(p_size + 1)
+
+    def plot_velocity_field(self):
+        num = 10
+        scale = np.linspace(-2, 2, num)
+        r = scale.reshape(1, -1) + 1.0j * scale.reshape(-1, 1)
+        w = np.zeros((num, num))
+        for i in range(num):
+            for j in range(num):
+                w[i, j] = self.get_velocity_from_vortex(r[i, j])
+        plt.quiver(np.real(r), np.imag(r), np.real(w), np.imag(w))
+        plt.show()
 
 
 def main():
