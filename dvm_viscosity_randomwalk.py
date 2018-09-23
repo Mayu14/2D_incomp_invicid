@@ -196,18 +196,18 @@ class VortexControl(object):
 
         for i in range(p_size): # 全パネルに関するループ
             tangent_velocity = self.get_velocity_from_vortex(z_ref=ref[i], dist_vector=inv_delta[i])    # 右回り接線方向速度
-            if tangent_velocity > self.machine_zero:
-                tmpCirculation = tangent_velocity * len[i]  # 必要な循環値
-                self.time_derivative_of_circulation[i] = tmpCirculation    # 単位時間当たりのパネルから生じる循環の強さ [1](21)式右辺第2項
 
-                number = ceil(tmpCirculation / self.limit_of_circulation)  # 配置する渦要素の数
+            if abs(tangent_velocity) > self.machine_zero:
+                tmpCirculation = tangent_velocity * len[i]  # 必要な循環値
+                self.time_derivative_of_circulation[i] += tmpCirculation    # 単位時間当たりのパネルから生じる循環の強さ [1](21)式右辺第2項
+
+                number = ceil(abs(tmpCirculation) / self.limit_of_circulation)  # 配置する渦要素の数
 
                 new_circulation = tmpCirculation / number   # 新しい要素1つあたりの循環値
 
                 new_coordinate = ref[i] + generate_point[i] # 渦要素を生成する座標
                 for new_vortex in range(number):    # 新規追加する渦要素の数だけループ
                     self.add_Vortex(new_circulation, new_coordinate, np.abs(generate_point[i])) # 半径として参照点と渦要素の初期位置との距離をそのまま採用(次ステップで物体から離れる方向へ移動しなければ渦要素は消滅する)
-
 
     # 子リストの追加メソッド
     def make_new_child_list(self):
@@ -394,8 +394,11 @@ class VortexControl(object):
 
     def __get_pressure_on_panel(self):
         self.pressure = np.zeros(self.p_size)
+
         for i in range(self.p_size - 1):
             self.pressure[i + 1] = self.pressure[i] - self.time_derivative_of_circulation[i] / self.timestep_convection  # [1](21)式
+
+        self.time_derivative_of_circulation = np.zeros(self.p_size)
 
     def get_aero_characteristics(self, output_residual = True):
         self.lastDrag = self.drag
