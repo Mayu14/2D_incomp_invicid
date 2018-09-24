@@ -18,7 +18,7 @@ def get_complex_U(inflow_velocity, attack_angle_degree):
 def get_complex_coords(type, size, center_x = -0.08, center_y = 0.08, naca4="0012"):
     if type == 0:
         t = np.linspace(start = 0, stop = 2.0 * np.pi, num = size + 1)
-        z = np.exp(1j * t)
+        z = np.exp(1j * t)[:size]
     elif type == 1:
         z = joukowski_wing_complex(size, center_x, center_y)
     elif type == 2:
