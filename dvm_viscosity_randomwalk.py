@@ -2,7 +2,7 @@
 import numpy as np
 import scipy.linalg as linalg
 import scipy.sparse.linalg as spla
-from dvm_beta import get_complex_coords, get_complex_U
+from dvm_beta import get_complex_coords, get_complex_U, plot_vtk
 from math import sqrt, ceil
 from cmath import phase
 from random import gauss
@@ -41,7 +41,7 @@ class VortexElement(object):
         self.coordinate = self.coordinate_z1
 
 class VortexControl(object):
-    def __init__(self, z, complex_U):
+    def __init__(self, z, complex_U, path, fname):
         self.number = 0 # 渦要素の総数
         self.child_list_num = 0 # 子リストの総数
         self.current_child = 0  # 現在の子リスト位置(削除するかも)
@@ -80,6 +80,14 @@ class VortexControl(object):
         self.lift = 100
         self.drag = 100
         self.gamma = np.zeros(self.p_size)
+        # plotの設定
+        self.plot_area_size = 2.0
+        self.square_plot = True
+        self.vtk_plot_resolution = 500
+        self.vtk_path = path
+        self.vtk_name = fname
+
+
 
     # 計算設定の読み込み(本処理を開始する前に外部から別途呼び出すことを想定している)
     def set_config(self, reynolds_number = 5000, induced_velocity_limit = 10.0**(2), limit_for_element_list = 1000, vortex_limit = 100000, min_edge = 0.001, time_step_convection=0.01, time_division_diffusion=2, tolerance = 0.005):
@@ -138,9 +146,11 @@ class VortexControl(object):
         for child_list in self.parent_list:    # 全部の子リストについてループ
             for vortex in child_list:    # 子リスト内全要素についてループ
                 circulation += vortex.circulation
-
-        circulation += np.sum(self.gamma)
-
+        """
+        circulation += 0.5 * (self.len[self.p_size - 1] + self.len[0]) * self.gamma[0]
+        for j in range(1, self.p_size):
+            circulation += 0.5 * (self.len[j - 1] + self.len[j]) * self.gamma[j]
+        """
         return circulation
 
     # 複素座標z_refに渦要素が誘導する速度を求めるメソッド(複素dist_vector方向速度を求めるオプション有)(O(Nv + Np))
@@ -165,23 +175,12 @@ class VortexControl(object):
                 dv = velocity_from_vorticity(z_ref, vortex.coordinate, vortex.radius, vortex.circulation, outer)
                 velocity += dv
 
-                if np.abs(dv) > 10.0:
-                    print(dv, z_ref, vortex.coordinate, vortex.radius, vortex.circulation)
-                    print(np.abs(z_ref), np.abs(vortex.coordinate))
-                    print(vortex.coordinate_z0, vortex.coordinate_z1)
-                    # 物体の内側に入り込んでいる要素の寄与を計算してるっぽい
-                    exit()
-
         # パネル上の渦要素からの寄与
+        """
         for i in range(self.p_size):
-            dv = velocity_from_vorticity(z_ref, self.z[i], self.len[i]/(10000.0*np.pi), self.gamma[i], outer)
+            dv = velocity_from_vorticity(z_ref, self.z[i], self.len[i]/(10000.0*np.pi), 0.5 * (self.len[i - 1] + self.len[i]) * self.gamma[i], outer)
             velocity += dv
-            if np.abs(dv) > 10.0:
-                print(dv, z_ref, self.z[i], self.len[i], self.gamma[i], i)
-                print(z_ref - self.z[i])
-                # 物体の内側に入り込んでいる要素の寄与を計算してるっぽい
-                exit()
-
+            """
         if dist_vector != None:
             return np.real((velocity / (2.0 * np.pi) + self.complex_U) * np.conjugate(dist_vector))    # dist_vector方向成分を返す(返り値は実数)
 
@@ -193,8 +192,6 @@ class VortexControl(object):
             for vortex in child_list:    # 子リスト内全要素についてループ
                 # vortex.store_new_coordinate(self.get_velocity_from_vortex(vortex.coordinate) * self.timestep_convection)
                 delta_z = self.get_velocity_from_vortex(vortex.coordinate) * self.timestep_convection
-                if np.abs(delta_z > 0.1):
-                    delta_z /= 0.1 * np.abs(delta_z)
                 vortex.store_new_coordinate(delta_z)
 
 
@@ -499,6 +496,37 @@ class VortexControl(object):
         plt.plot(np.real(self.z), np.imag(self.z))
         plt.show()
 
+    def plot_detail_velocity_field(self):
+        area_size = self.plot_area_size
+        square_plot = self.square_plot
+        plot_resolution = self.vtk_plot_resolution
+        path = self.vtk_path
+        fname = self.vtk_name
+
+        plot_width = (self.right_bound - self.left_bound) + 1j * (self.top_bound - self.bottom_bound)
+        plot_min = self.object_center - area_size * plot_width
+        plot_max = self.object_center + area_size * plot_width
+        if square_plot == True:
+            min_sq = min(np.real(plot_min), np.imag(plot_min))
+            max_sq = max(np.real(plot_max), np.imag(plot_max))
+            plot_min = min_sq + 1j * min_sq
+            plot_max = max_sq + 1j * max_sq
+        x = np.linspace(start=np.real(plot_min), stop=np.real(plot_max), num=plot_resolution).reshape(-1, 1)
+        y = np.linspace(start=np.imag(plot_min), stop=np.imag(plot_max), num=plot_resolution).reshape(1, -1)
+        ref = x + 1j * y
+        w = np.zeros((plot_resolution, plot_resolution), dtype=complex)
+
+        for i in range(plot_resolution):
+            for j in range(plot_resolution):
+                w[i, j] = self.get_velocity_from_vortex(ref[i, j])
+
+        velocity = np.zeros((plot_resolution, plot_resolution, 2), dtype=float)
+        velocity[:, :, 0] = np.real(w)
+        velocity[:, :, 1] = np.imag(w)
+
+        plot_vtk(velocity, plot_resolution, plot_min, plot_max, path, fname)
+
+
 def main():
     # 計算条件
     size = 100
@@ -507,15 +535,18 @@ def main():
     naca4 = "6633"
     inflow = 1.0
     alpha = 0.0
-    type = 0
+    type = 3
 
     # 一様流の複素速度
     complex_U = get_complex_U(inflow_velocity = inflow, attack_angle_degree = alpha)
 
     z, size = get_complex_coords(type, size, center_x, center_y, naca4) # 離散的な物体形状(パネル端点)の複素座標の取得(論文中の添字j)
 
+    path = "D:\\Toyota\\Data\\DVM_v_mk1\\"
+    fname = "dvm_v_mk1_test_type_" + str(type).zfill(2)
+
     # print(invQ)
-    controller = VortexControl(z, complex_U)
+    controller = VortexControl(z, complex_U, path, fname)
     # controller.plot_object()
 
     controller.main_process()
