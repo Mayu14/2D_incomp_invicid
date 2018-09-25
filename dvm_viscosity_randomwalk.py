@@ -136,8 +136,9 @@ class VortexControl(object):
 
                 residual = self.get_aero_characteristics()  # 空力特性を計算し，残差を求める
                 print(self.lift, self.drag)
+                self.plot_detail_velocity_field()
                 # self.plot_velocity_field()
-                self.plot_vortex_element()
+                # self.plot_vortex_element()
 
 
     # 渦要素の循環の合計値を求めるメソッド(O(Nv))
@@ -399,7 +400,7 @@ class VortexControl(object):
 
         self.gamma = spla.bicg(self.tAA, np.dot(self.tA, self.b))[0]
 
-        self.plot_velocity_field()
+        # self.plot_velocity_field()
 
 
 
@@ -471,8 +472,8 @@ class VortexControl(object):
         for i in range(w.shape[0]):
             for j in range(w.shape[1]):
                 w[i, j] = self.get_velocity_from_vortex(r[i, j])
-        print(np.max(w))
-        print(np.min(w))
+        # print(np.max(w))
+        # print(np.min(w))
         plt.quiver(np.real(r), np.imag(r), np.real(w), np.imag(w))
         plt.show()
 
