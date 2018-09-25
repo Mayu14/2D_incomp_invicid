@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 [1] 三上, 宮本, 安藤, "渦法によるはく離流れの解析 -回転円柱および回転円筒部をもつ翼まわりの流れ-", ながれ 12, (1993), pp.31-45
 """
 
-# 渦要素
+# 渦要素オブジェクト
 class VortexElement(object):
     def __init__(self, circulation, coordinate, radius):
         self.circulation = circulation
@@ -40,6 +40,7 @@ class VortexElement(object):
     def update_new_coordinate(self):
         self.coordinate = self.coordinate_z1
 
+# 渦要素オブジェクト制御用プログラム群
 class VortexControl(object):
     def __init__(self, z, complex_U, path, fname):
         self.number = 0 # 渦要素の総数
@@ -48,6 +49,7 @@ class VortexControl(object):
 
         self.parent_list = [[]]   # child_listのリスト
         self.len_list = [0]  # child_listの現在の要素数
+        self.add_list = []  # 追加対象のリスト
         self.deletion_list = [[]]   # 削除対象のリスト
         self.merge_list = []    # 結合対象のリスト
 
@@ -62,6 +64,7 @@ class VortexControl(object):
         self.len = np.abs(self.delta)  # パネルの長さ(論文中のlj)
         self.normal = self.delta / (1j * self.len)  # パネルの単位法線ベクトル(論文中のn)
         self.max_len = np.max(self.len) # パネル長のうち最大のもの
+        self.obj_len = np.max(np.real(z)) - np.min(np.real(z))  # 空力係数計算用の面積
         self.outer_area = 2.0 * np.abs(max(np.max(np.real(z)) - np.min(np.real(z)), np.max(np.imag(z)) - np.min(np.imag(z)))) # 物体の長軸方向の2倍
         self.object_center = 0.5 * ((np.max(np.real(z)) + np.min(np.real(z))) + 1.0j * (np.max(np.imag(z)) + np.min(np.imag(z))))   # 物体の中心座標
 
@@ -77,6 +80,8 @@ class VortexControl(object):
 
         # 初期化が必要な変数
         self.machine_zero = 10.0**(-14)
+        self.lift_history = []
+        self.drag_history = []
         self.lift = 100
         self.drag = 100
         self.gamma = np.zeros(self.p_size)
@@ -86,8 +91,6 @@ class VortexControl(object):
         self.vtk_plot_resolution = 500
         self.vtk_path = path
         self.vtk_name = fname
-
-
 
     # 計算設定の読み込み(本処理を開始する前に外部から別途呼び出すことを想定している)
     def set_config(self, reynolds_number = 5000, induced_velocity_limit = 10.0**(2), limit_for_element_list = 1000, vortex_limit = 100000, min_edge = 0.001, time_step_convection=0.01, time_division_diffusion=2, tolerance = 0.005):
@@ -108,25 +111,18 @@ class VortexControl(object):
 
         self.tolerance = tolerance
 
-    #"""
     def main_process(self):
         residual = 100
         while residual > self.tolerance:
             for block in range(10):
                 self.get_circulation_on_panel() # 非粘性仮定でパネル上の循環を求める
                 self.generate_vortex()  # 物体表面の接線方向速度を消すために渦要素を発生させる
-                print(self.number)
+
                 self.get_circulation_on_panel() # 追加された渦要素を含めて非粘性仮定で循環値を修正する
                 self.get_move_convection()  # 渦要素の移流先を計算する
-                # self.search_for_deletion_target()   # 接触判定を行う
-                # self.del_Vortex()   # 物体と接触した渦要素を削除する
-                # self.complete_move_vortex() # 移動を反映する
-                
+
                 for step in range(self.time_division_diffusion):    # 拡散計算の分割処理
                     self.get_move_diffusion()   # 渦要素の拡散先を計算する
-                    # self.search_for_deletion_target()   # 接触判定を行う
-                    # self.del_Vortex()  # 物体と接触した渦要素を削除する
-                    # self.complete_move_vortex() # 移動を反映する
 
                 self.search_for_deletion_target()  # 接触判定を行う
                 self.del_Vortex()  # 物体と接触した渦要素を削除する
@@ -135,11 +131,14 @@ class VortexControl(object):
                 self.merge_vortex() # 渦要素を結合する
 
                 residual = self.get_aero_characteristics()  # 空力特性を計算し，残差を求める
-                print(self.lift, self.drag)
-                self.plot_detail_velocity_field()
+                print(self.number, residual, self.lift, self.drag)
+                # self.plot_detail_velocity_field()
                 # self.plot_velocity_field()
                 # self.plot_vortex_element()
 
+            self.plot_characteristics_history()
+            self.plot_vortex_element()
+            self.plot_velocity_field()
 
     # 渦要素の循環の合計値を求めるメソッド(O(Nv))
     def get_circulation_sum(self):
@@ -147,15 +146,12 @@ class VortexControl(object):
         for child_list in self.parent_list:    # 全部の子リストについてループ
             for vortex in child_list:    # 子リスト内全要素についてループ
                 circulation += vortex.circulation
-        """
-        circulation += 0.5 * (self.len[self.p_size - 1] + self.len[0]) * self.gamma[0]
-        for j in range(1, self.p_size):
-            circulation += 0.5 * (self.len[j - 1] + self.len[j]) * self.gamma[j]
-        """
+
         return circulation
 
     # 複素座標z_refに渦要素が誘導する速度を求めるメソッド(複素dist_vector方向速度を求めるオプション有)(O(Nv + Np))
-    def get_velocity_from_vortex(self, z_ref, dist_vector = None):
+    # include_panel = Trueのときパネル上の循環も考慮に入れる(パネル上の分布を未知とするときのみFalse)
+    def get_velocity_from_vortex(self, z_ref, dist_vector = None, include_panel = True):
         def velocity_from_vorticity(z_ref, z_vortex, r_vortex, g_vortex, outer):
             difference = z_ref - z_vortex
             distance = np.abs(difference)  # [1](7)式のr
@@ -177,11 +173,11 @@ class VortexControl(object):
                 velocity += dv
 
         # パネル上の渦要素からの寄与
-        """
-        for i in range(self.p_size):
-            dv = velocity_from_vorticity(z_ref, self.z[i], self.len[i]/(10000.0*np.pi), 0.5 * (self.len[i - 1] + self.len[i]) * self.gamma[i], outer)
-            velocity += dv
-            """
+        if include_panel:
+            velocity += velocity_from_vorticity(z_ref, self.z[0], self.len[0] / (10000.0 * np.pi), 0.5 * (self.len[self.p_size - 1] + self.len[0]) * self.gamma[0], outer)
+            for i in range(1, self.p_size):
+                velocity += velocity_from_vorticity(z_ref, self.z[i], self.len[i]/(10000.0*np.pi), 0.5 * (self.len[i - 1] + self.len[i]) * self.gamma[i], outer)
+
         if dist_vector != None:
             return np.real((velocity / (2.0 * np.pi) + self.complex_U) * np.conjugate(dist_vector))    # dist_vector方向成分を返す(返り値は実数)
 
@@ -229,8 +225,11 @@ class VortexControl(object):
                 new_circulation = tmpCirculation / number   # 新しい要素1つあたりの循環値
                 new_coordinate = ref[i] + generate_point[i] # 渦要素を生成する座標
 
+                # 恐らく，追加と登録を分けないと要素の追加の順番に影響を受ける
                 for new_vortex in range(number):    # 新規追加する渦要素の数だけループ
-                    self.add_Vortex(new_circulation, new_coordinate, np.abs(generate_point[i])) # 半径として参照点と渦要素の初期位置との距離をそのまま採用(次ステップで物体から離れる方向へ移動しなければ渦要素は消滅する)
+                    self.register_add_target(new_circulation, new_coordinate, np.abs(generate_point[i])) # 半径として参照点と渦要素の初期位置との距離をそのまま採用(次ステップで物体から離れる方向へ移動しなければ渦要素は消滅する)
+
+        self.add_registered_vortex()
 
 
     # 子リストの追加メソッド
@@ -251,16 +250,27 @@ class VortexControl(object):
         # list.append(VortexElement(circulation, coordinate, radius))
         self.parent_list[self.current_child].append(VortexElement(circulation, coordinate, radius))
 
+    def add_registered_vortex(self):
+        add_list = np.array(self.add_list, dtype=complex).reshape(-1, 3)
+
+        for i in range(add_list.shape[0]):
+            self.add_Vortex(np.real(add_list[i, 0]), add_list[i, 1], np.real(add_list[i, 2]))
+        self.add_list = []  # 初期化
+
     # 子リスト・idを指定して渦要素を削除対象として登録するメソッド
     def register_deletion_target(self, child, id):
         self.deletion_list[child].append(id)
+
+    def register_add_target(self, circulation, coordinate, radius):
+        self.add_list.append(circulation)
+        self.add_list.append(coordinate)
+        self.add_list.append(radius)
 
     # 子リスト・idを指定して渦要素を結合対象として登録するメソッド
     def register_merge_target(self, child, id, angle):
         self.merge_list.append(child)
         self.merge_list.append(id)
         self.merge_list.append(angle)    # 方向
-
 
     # 削除対象として登録された渦要素を一括で削除するためのメソッド
     def del_Vortex(self):
@@ -305,7 +315,7 @@ class VortexControl(object):
 
         self.register_deletion_target(child1, id1)
         self.register_deletion_target(child2, id2)
-        self.add_Vortex(merge_circulation(g1, g2), merge_coordinate(z1, z2, r1, r2), merge_radius(r1, r2))
+        self.register_add_target(merge_circulation(g1, g2), merge_coordinate(z1, z2, r1, r2), merge_radius(r1, r2))
 
     # 結合処理の対象となる要素を検索する
     def merge_vortex(self):
@@ -349,6 +359,7 @@ class VortexControl(object):
 
         # すべての結合が終了したら
         self.del_Vortex()
+        self.add_registered_vortex()
         self.merge_list = []    # リストの初期化
 
     # 削除対象となる要素を検索する
@@ -394,14 +405,14 @@ class VortexControl(object):
 
     def get_circulation_on_panel(self):
         for i in range(self.p_size):
-            self.b[i] = self.get_velocity_from_vortex(self.ref[i], dist_vector=-self.delta[i] / self.len[i])
+            self.b[i] = self.get_velocity_from_vortex(self.ref[i], dist_vector=-self.delta[i] / self.len[i], include_panel=False)   # panel上の渦分布は未知
 
-        self.b[self.p_size] = self.get_circulation_sum()
+        self.b[self.p_size] = - self.get_circulation_sum()
 
         self.gamma = spla.bicg(self.tAA, np.dot(self.tA, self.b))[0]
-
+        error = np.dot(self.tA.T, self.gamma) - self.b
+        # print(np.dot(error.T, error))
         # self.plot_velocity_field()
-
 
 
     def __get_pressure_on_panel(self):
@@ -417,21 +428,30 @@ class VortexControl(object):
         self.lastLift = self.lift
 
         self.__get_pressure_on_panel()
-        characteristics = np.sum(self.pressure * self.normal)
+
+        characteristics = np.sum(self.pressure * self.normal * self.len) / (0.5 * np.abs(self.complex_U) ** 2 * self.obj_len)
         self.drag = np.real(characteristics)
         self.lift = np.imag(characteristics)
+        self.drag_history.append(self.drag)
+        self.lift_history.append(self.lift)
+
         if output_residual:
             return max(sqrt((self.drag - self.lastDrag)**2), sqrt((self.lift - self.lastLift)**2))
+
+    def plot_characteristics_history(self):
+        drag = np.array(self.drag_history)
+        lift = np.array(self.lift_history)
+        t = np.arange(drag.shape[0]) * self.timestep_convection
+        plt.plot(t, drag)
+        plt.plot(t, lift)
+        plt.show()
 
     def set_tAA_and_tA(self):
         # 参考文献[1]の(16)式について
         # QR分解してもQとRが悪条件になってしまうため，正規方程式を反復法で解く
-
         # 準備
         z = self.z
         p_size = self.p_size # z[0] = z[size - 1]に注意されたし 始点と終点が同じ点を示しているため，点の数は-1)
-        ref = self.ref  # パネル中点の参照座標の取得(論文中の添字i)
-        delta = self.delta    # 各パネル単点間の距離
         len = self.len # パネルの長さ(論文中のlj)
         normal = self.normal # パネルの単位法線ベクトル(論文中のn)
 
@@ -462,12 +482,18 @@ class VortexControl(object):
         self.tAA = np.dot(A.T, A)
         self.b = np.zeros(p_size + 1)
 
+    # other
 
-    def plot_velocity_field(self):
+    def plot_velocity_field(self, circle = True):
         num = 5
-        theta = np.linspace(0, 2.0*np.pi, num**2)
-        a = np.linspace(1.05, 2.0, num)
-        r = a.reshape(-1, 1) * np.exp(1.0j * theta.reshape(1, -1))
+        if circle:
+            theta = np.linspace(0, 2.0*np.pi, num**2)
+            a = np.linspace(1.05, 2.0, num)
+            r = a.reshape(-1, 1) * np.exp(1.0j * theta.reshape(1, -1))
+        else:
+            a = np.linspace(-0.5, 1.5, num)
+            r = a.reshape(-1, 1) + 1j * a.reshape(1, -1)
+
         w = np.zeros_like(r, dtype=complex)
         for i in range(w.shape[0]):
             for j in range(w.shape[1]):
@@ -536,7 +562,7 @@ def main():
     naca4 = "6633"
     inflow = 1.0
     alpha = 0.0
-    type = 3
+    type = 0
 
     # 一様流の複素速度
     complex_U = get_complex_U(inflow_velocity = inflow, attack_angle_degree = alpha)
