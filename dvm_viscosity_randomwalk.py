@@ -1,7 +1,7 @@
 # -- coding: utf-8 --
 import numpy as np
-import scipy.linalg as linalg
 import scipy.sparse.linalg as spla
+from scipy import fftpack
 from dvm_beta import get_complex_coords, get_complex_U, plot_vtk
 from math import sqrt, ceil
 from cmath import phase
@@ -111,34 +111,36 @@ class VortexControl(object):
 
         self.tolerance = tolerance
 
+    def test_case(self):
+        # 初期条件の影響を消すための慣らし区間
+        self.timestep_convection = 0.05
+        for i in range(int(5.0/self.timestep_convection)):
+            print(float(i+1)*5.0/self.timestep_convection, self.number)
+            self.main_process()
+
+        self.timestep_convection = 0.01
+        for i in range(int(10.0/self.timestep_convection)):
+            self.main_process()
+            self.get_aero_characteristics(output_residual=False)
+            print(5.0+float(i+1)*10.0/self.timestep_convection, self.number, self.lift, self.drag)
+            self.plot_detail_velocity_field()
+
     def main_process(self):
-        residual = 100
-        while residual > self.tolerance:
-            for block in range(10):
-                self.get_circulation_on_panel() # 非粘性仮定でパネル上の循環を求める
-                self.generate_vortex()  # 物体表面の接線方向速度を消すために渦要素を発生させる
+        self.get_circulation_on_panel() # 非粘性仮定でパネル上の循環を求める
+        self.generate_vortex()  # 物体表面の接線方向速度を消すために渦要素を発生させる
 
-                self.get_circulation_on_panel() # 追加された渦要素を含めて非粘性仮定で循環値を修正する
-                self.get_move_convection()  # 渦要素の移流先を計算する
+        self.get_circulation_on_panel() # 追加された渦要素を含めて非粘性仮定で循環値を修正する
+        self.get_move_convection()  # 渦要素の移流先を計算する
 
-                for step in range(self.time_division_diffusion):    # 拡散計算の分割処理
-                    self.get_move_diffusion()   # 渦要素の拡散先を計算する
+        for step in range(self.time_division_diffusion):    # 拡散計算の分割処理
+            self.get_move_diffusion()   # 渦要素の拡散先を計算する
 
-                self.search_for_deletion_target()  # 接触判定を行う
-                self.del_Vortex()  # 物体と接触した渦要素を削除する
-                self.complete_move_vortex()  # 移動を反映する
-                
-                self.merge_vortex() # 渦要素を結合する
+        self.search_for_deletion_target()  # 接触判定を行う
+        self.del_Vortex()  # 物体と接触した渦要素を削除する
+        self.complete_move_vortex()  # 移動を反映する
 
-                residual = self.get_aero_characteristics()  # 空力特性を計算し，残差を求める
-                print(self.number, residual, self.lift, self.drag)
-                # self.plot_detail_velocity_field()
-                # self.plot_velocity_field()
-                # self.plot_vortex_element()
+        self.merge_vortex() # 渦要素を結合する
 
-            self.plot_characteristics_history()
-            self.plot_vortex_element()
-            self.plot_velocity_field()
 
     # 渦要素の循環の合計値を求めるメソッド(O(Nv))
     def get_circulation_sum(self):
@@ -488,7 +490,7 @@ class VortexControl(object):
         num = 5
         if circle:
             theta = np.linspace(0, 2.0*np.pi, num**2)
-            a = np.linspace(1.05, 2.0, num)
+            a = np.linspace(1.001, 1.05, num)
             r = a.reshape(-1, 1) * np.exp(1.0j * theta.reshape(1, -1))
         else:
             a = np.linspace(-0.5, 1.5, num)
@@ -552,6 +554,24 @@ class VortexControl(object):
         velocity[:, :, 1] = np.imag(w)
 
         plot_vtk(velocity, plot_resolution, plot_min, plot_max, path, fname)
+    """
+    def noize_removal(self):
+        drag = np.array(self.drag_history)
+        lift = np.array(self.lift_history)
+        num = int(10.0/self.timestep_convection)
+        t = np.arange(0, self.timestep_convection * (num - 1), num)
+
+        fftpack.fftfreq()
+    """
+    def get_normalize_characteristics(self):
+        # 初期条件の影響を消すための慣らし区間
+        for i in range(int(5.0/self.timestep_convection)):
+            self.main_process()
+
+        for i in range(int(10.0/self.timestep_convection)):
+            self.main_process()
+            self.get_aero_characteristics(output_residual=False)
+
 
 
 def main():
@@ -576,7 +596,7 @@ def main():
     controller = VortexControl(z, complex_U, path, fname)
     # controller.plot_object()
 
-    controller.main_process()
+    controller.test_case()
 
 if __name__ == '__main__':
     main()
