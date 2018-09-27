@@ -7,6 +7,7 @@ from math import sqrt, ceil
 from cmath import phase
 from random import gauss
 import matplotlib.pyplot as plt
+import numba
 """
 参考文献
 [1] 三上, 宮本, 安藤, "渦法によるはく離流れの解析 -回転円柱および回転円筒部をもつ翼まわりの流れ-", ながれ 12, (1993), pp.31-45
@@ -113,10 +114,14 @@ class VortexControl(object):
 
     def test_case(self):
         # 初期条件の影響を消すための慣らし区間
+        j = 0
         self.timestep_convection = 0.05
         for i in range(int(5.0/self.timestep_convection)):
+            j += 1
             print(float(i+1)*5.0/self.timestep_convection, self.number)
             self.main_process()
+            if j > 5:
+                exit()
 
         self.timestep_convection = 0.01
         for i in range(int(10.0/self.timestep_convection)):
@@ -153,17 +158,20 @@ class VortexControl(object):
 
     # 複素座標z_refに渦要素が誘導する速度を求めるメソッド(複素dist_vector方向速度を求めるオプション有)(O(Nv + Np))
     # include_panel = Trueのときパネル上の循環も考慮に入れる(パネル上の分布を未知とするときのみFalse)
+    @numba.jit
+    def velocity_from_vorticity(self, z_ref, z_vortex, r_vortex, g_vortex, outer, machine_eps):
+        difference = z_ref - z_vortex
+        distance = np.abs(difference)  # [1](7)式のr
+        gr = min(distance / r_vortex, 1.0)  # [1](7)式のg(r)
+
+        if distance > machine_eps:
+            return (g_vortex * gr / distance ** 2) * (difference * outer)  # [1](5)式
+        else:
+            return 0
+
+
     def get_velocity_from_vortex(self, z_ref, dist_vector = None, include_panel = True):
-        def velocity_from_vorticity(z_ref, z_vortex, r_vortex, g_vortex, outer):
-            difference = z_ref - z_vortex
-            distance = np.abs(difference)  # [1](7)式のr
-            gr = min(distance / r_vortex, 1.0)  # [1](7)式のg(r)
-
-            if distance > machine_eps:
-                return (g_vortex * gr / distance**2) * (difference * outer)  # [1](5)式
-
-            else:
-                return 0
+        velocity_from_vorticity = self.velocity_from_vorticity
 
         velocity = 0
         machine_eps = self.machine_zero   # 参照点と渦要素の距離がこの値以下であるとき同一座標とみなす
@@ -171,14 +179,14 @@ class VortexControl(object):
         for child_list in self.parent_list:    # 全部の子リストについてループ
             for vortex in child_list:    # 子リスト内全要素についてループ
                 # velocity += velocity_from_vorticity(z_ref, vortex.coordinate, vortex.radius, vortex.circulation, outer)
-                dv = velocity_from_vorticity(z_ref, vortex.coordinate, vortex.radius, vortex.circulation, outer)
+                dv = velocity_from_vorticity(z_ref, vortex.coordinate, vortex.radius, vortex.circulation, outer, machine_eps)
                 velocity += dv
 
         # パネル上の渦要素からの寄与
         if include_panel:
-            velocity += velocity_from_vorticity(z_ref, self.z[0], self.len[0] / (10000.0 * np.pi), 0.5 * (self.len[self.p_size - 1] + self.len[0]) * self.gamma[0], outer)
+            velocity += velocity_from_vorticity(z_ref, self.z[0], self.len[0] / (10000.0 * np.pi), 0.5 * (self.len[self.p_size - 1] + self.len[0]) * self.gamma[0], outer, machine_eps)
             for i in range(1, self.p_size):
-                velocity += velocity_from_vorticity(z_ref, self.z[i], self.len[i]/(10000.0*np.pi), 0.5 * (self.len[i - 1] + self.len[i]) * self.gamma[i], outer)
+                velocity += velocity_from_vorticity(z_ref, self.z[i], self.len[i]/(10000.0*np.pi), 0.5 * (self.len[i - 1] + self.len[i]) * self.gamma[i], outer, machine_eps)
 
         if dist_vector != None:
             return np.real((velocity / (2.0 * np.pi) + self.complex_U) * np.conjugate(dist_vector))    # dist_vector方向成分を返す(返り値は実数)
