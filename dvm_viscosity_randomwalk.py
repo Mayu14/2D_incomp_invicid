@@ -115,14 +115,14 @@ class VortexControl(object):
         # 初期条件の影響を消すための慣らし区間
         self.timestep_convection = 0.05
         for i in range(int(5.0/self.timestep_convection)):
-            print(float(i+1)*5.0/self.timestep_convection, self.number)
+            print(float(i+1)*self.timestep_convection, self.number)
             self.main_process()
 
         self.timestep_convection = 0.01
         for i in range(int(10.0/self.timestep_convection)):
             self.main_process()
             self.get_aero_characteristics(output_residual=False)
-            print(5.0+float(i+1)*10.0/self.timestep_convection, self.number, self.lift, self.drag)
+            print(5.0+float(i+1)*self.timestep_convection, self.number, self.lift, self.drag)
             self.plot_detail_velocity_field()
 
     def main_process(self):
@@ -589,7 +589,7 @@ def main():
 
     z, size = get_complex_coords(type, size, center_x, center_y, naca4) # 離散的な物体形状(パネル端点)の複素座標の取得(論文中の添字j)
 
-    path = "D:\\Toyota\\Data\\DVM_v_mk1\\"
+    path = "D:\\Toyota\\Data\\DVM_v_mk2\\"
     fname = "dvm_v_mk1_test_type_" + str(type).zfill(2)
 
     # print(invQ)
