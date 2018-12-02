@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=100):
+def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=100, path="", fname="scat"):
     size = data_a.shape[0]
     size_b = data_b.shape[0]
     if size != size_b:
@@ -42,7 +42,7 @@ def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=100):
     plt.xlabel(label_a)
     plt.ylabel(label_b)
     plt.plot(label, label, color="white", linestyle="dashed")
-    plt.show()
+    plt.savefig(path + fname + ".png")
 
 def test():
     def test_func(x, r):
