@@ -12,7 +12,7 @@ def inference(source, case_number, env):
     # fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
     # X_test, y_test = read_csv_type3(source, fname_lift_train, fname_shape_train, shape_odd=0, read_rate=1)
 
-    source = "D:\\Toyota\\Data\\Incompressible_Invicid\\training_data\\"
+    source = "G:\\Toyota\\Data\\Incompressible_Invicid\\training_data\\"
     fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
     fname_shape_test = "NACA5\\shape_fourier_all.csv"
     x_test, y_test = read_csv_type3(source, fname_lift_test, fname_shape_test, shape_odd=0, read_rate=1)
@@ -29,6 +29,9 @@ def inference(source, case_number, env):
     print('test loss :', score[0])
     print('test accuracy :', score[1])
 
+
+
 if __name__ == '__main__':
     case_number = 0
-    inference(case_number)
+    source = ""
+    inference(source, case_number, env="lab")
