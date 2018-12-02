@@ -18,22 +18,22 @@ def inference(source, case_number, env):
     x_test, y_test = read_csv_type3(source, fname_lift_test, fname_shape_test, shape_odd=0, read_rate=1)
 
     model = model_from_json(open(source + json_name).read())
-    model.load_weight(weight_name)
+    model.load_weights(source + weight_name)
 
     model.summary()
 
     model.compile(loss="mean_squared_error",
                   optimizer='Adam')
 
-    score = model.evaluate()
-    print('test loss :', score[0])
-    print('test accuracy :', score[1])
+    # score = model.evaluate()
+    # print('test loss :', score[0])
+    # print('test accuracy :', score[1])
 
     y_predict = model.predict(x_test)
     make_scatter_plot(y_test, y_predict, "CL(Exact)", "CL(Predict)", path="G:\\Toyota\\Data\\Incompressible_Invicid\\fig\\", fname="test")
 
 
 if __name__ == '__main__':
-    case_number = 0
+    case_number = "00000"
     source = ""
     inference(source, case_number, env="lab")
