@@ -12,6 +12,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from read_training_data import read_csv_type3
+from scatter_plot import make_scatter_plot
 
 def batch_iter(data, labels, batch_size, shuffle=True):
     num_batches_per_epoch = int((len(data) - 1) / batch_size) + 1
@@ -58,6 +59,22 @@ def get_case_number(source, env, case_number):
             flag = 1
     return str(case_number).zfill(5)
 
+# case_numberから何のデータだったか思い出せない問題が起きたのでファイル名の命名規則を変更する
+# (形状)_(データ数)とする
+def get_case_number_beta(case_number, rr, total_data=200000):
+    if int(case_number) / 1000 == 0:
+        head = "fourierSr"
+    elif int(case_number) / 1000 == 1:
+        head = "equidistant"
+    elif int(case_number) / 1000 == 2:
+        head = "concertrate"
+    else:
+        "case number error"
+        exit()
+    tail = str(int(total_data / rr))
+
+    return "_" + head + "_" + tail + "_"
+
 def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env="Lab"):
     r_rate = [1, 2, 4, 8]
     for rr in r_rate:
@@ -74,7 +91,8 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
             source = "Incompressible_Invicid\\training_data\\"
             if env == "Lab":
                 source = "G:\\Toyota\\Data\\" + source
-                case_num = get_case_number(source, env, case_number)
+                # case_num = get_case_number(source, env, case_number)
+                case_num = get_case_number_beta(case_number, rr)
                 log_name = "learned\\" + case_num + "_tb_log.hdf5"
                 json_name = "learned\\" + case_num + "_mlp_model_.json"
                 weight_name = "learned\\" + case_num + "_mlp_weight.h5"
@@ -160,6 +178,8 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
             plt.plot(x_test[tekito:tekito+40, 0], y_test[tekito:tekito+40])
             plt.plot(x_test[tekito:tekito+40, 0], y_predict[tekito:tekito+40])
             plt.savefig(source + case_num + "_test.png")
+            make_scatter_plot(y_test, y_predict, "CL(Exact)", "CL(Predict)", path="G:\\Toyota\\Data\\Incompressible_Invicid\\fig\\", fname=case_num)
+
 
         json_string = model.to_json()
         open(source + json_name, 'w').write(json_string)
@@ -169,7 +189,7 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
 
 if __name__ == '__main__':
     # env_in = input("Please set envirionment: 0:Lab, 1:Colab")
-    env_in = str(1)
+    env_in = str(0)
     if env_in == str(0):
         env = "Lab"
     elif env_in == str(1):
@@ -179,32 +199,33 @@ if __name__ == '__main__':
         exit()
 
     # shape_type = input("please set shape_type: 0:fourier, 1:equidistant, 2:dense")
-    shape_type = str(0)
-    fname_lift_train = "NACA4\\s0000_e5000_a040_odd.csv"
-    fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
+    for i in range(3):
+        shape_type = str(i)
+        fname_lift_train = "NACA4\\s0000_e5000_a040_odd.csv"
+        fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
 
-    if shape_type == str(0):
-        fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
-        fname_shape_test = "NACA5\\shape_fourier_all.csv"
-        case_number = 0
+        if shape_type == str(0):
+            fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
+            fname_shape_test = "NACA5\\shape_fourier_all.csv"
+            case_number = 0
 
-    elif shape_type == str(1):
-        fname_shape_train = "NACA4\\shape_equidistant_5000_odd.csv"
-        fname_shape_test = "NACA5\\shape_equidistant_all.csv"
-        case_number = 1000
+        elif shape_type == str(1):
+            fname_shape_train = "NACA4\\shape_equidistant_5000_odd.csv"
+            fname_shape_test = "NACA5\\shape_equidistant_all.csv"
+            case_number = 1000
 
-    elif shape_type == str(2):
-        fname_shape_train = "NACA4\\shape_crowd_0.1_0.15_30_50_20_5000_odd.csv"
-        fname_shape_test = "NACA5\\shape_crowd_0.1_0.15_30_50_20_all.csv"
-        case_number = 2000
-    else:
-        print("shape_type error")
-        exit()
+        elif shape_type == str(2):
+            fname_shape_train = "NACA4\\shape_crowd_0.1_0.15_30_50_20_5000_odd.csv"
+            fname_shape_test = "NACA5\\shape_crowd_0.1_0.15_30_50_20_all.csv"
+            case_number = 2000
+        else:
+            print("shape_type error")
+            exit()
 
-    if env == "Colab":
-        fname_lift_train = fname_lift_train.replace("\\", "/")
-        fname_shape_train = fname_shape_train.replace("\\", "/")
-        fname_lift_test = fname_lift_test.replace("\\", "/")
-        fname_shape_test = fname_shape_test.replace("\\", "/")
+        if env == "Colab":
+            fname_lift_train = fname_lift_train.replace("\\", "/")
+            fname_shape_train = fname_shape_train.replace("\\", "/")
+            fname_lift_test = fname_lift_test.replace("\\", "/")
+            fname_shape_test = fname_shape_test.replace("\\", "/")
 
-    main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env=env)
+        main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env=env)
