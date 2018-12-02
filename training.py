@@ -73,7 +73,7 @@ def get_case_number_beta(case_number, rr, total_data=200000):
         exit()
     tail = str(int(total_data / rr))
 
-    return "_" + head + "_" + tail + "_"
+    return head + "_" + tail
 
 def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env="Lab"):
     r_rate = [1, 2, 4, 8]
@@ -199,33 +199,33 @@ if __name__ == '__main__':
         exit()
 
     # shape_type = input("please set shape_type: 0:fourier, 1:equidistant, 2:dense")
-    for i in range(3):
-        shape_type = str(i)
-        fname_lift_train = "NACA4\\s0000_e5000_a040_odd.csv"
-        fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
+    # for i in range(3):
+    shape_type = str(0)
+    fname_lift_train = "NACA4\\s0000_e5000_a040_odd.csv"
+    fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
 
-        if shape_type == str(0):
-            fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
-            fname_shape_test = "NACA5\\shape_fourier_all.csv"
-            case_number = 0
+    if shape_type == str(0):
+        fname_shape_train = "NACA4\\shape_fourier_5000_odd.csv"
+        fname_shape_test = "NACA5\\shape_fourier_all.csv"
+        case_number = 0
 
-        elif shape_type == str(1):
-            fname_shape_train = "NACA4\\shape_equidistant_5000_odd.csv"
-            fname_shape_test = "NACA5\\shape_equidistant_all.csv"
-            case_number = 1000
+    elif shape_type == str(1):
+        fname_shape_train = "NACA4\\shape_equidistant_5000_odd.csv"
+        fname_shape_test = "NACA5\\shape_equidistant_all.csv"
+        case_number = 1000
 
-        elif shape_type == str(2):
-            fname_shape_train = "NACA4\\shape_crowd_0.1_0.15_30_50_20_5000_odd.csv"
-            fname_shape_test = "NACA5\\shape_crowd_0.1_0.15_30_50_20_all.csv"
-            case_number = 2000
-        else:
-            print("shape_type error")
-            exit()
+    elif shape_type == str(2):
+        fname_shape_train = "NACA4\\shape_crowd_0.1_0.15_30_50_20_5000_odd.csv"
+        fname_shape_test = "NACA5\\shape_crowd_0.1_0.15_30_50_20_all.csv"
+        case_number = 2000
+    else:
+        print("shape_type error")
+        exit()
 
-        if env == "Colab":
-            fname_lift_train = fname_lift_train.replace("\\", "/")
-            fname_shape_train = fname_shape_train.replace("\\", "/")
-            fname_lift_test = fname_lift_test.replace("\\", "/")
-            fname_shape_test = fname_shape_test.replace("\\", "/")
+    if env == "Colab":
+        fname_lift_train = fname_lift_train.replace("\\", "/")
+        fname_shape_train = fname_shape_train.replace("\\", "/")
+        fname_lift_test = fname_lift_test.replace("\\", "/")
+        fname_shape_test = fname_shape_test.replace("\\", "/")
 
-        main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env=env)
+    main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env=env)
