@@ -1,7 +1,7 @@
 # -- coding: utf-8 --
-import numpy as np
 from keras.models import model_from_json
 from read_training_data import read_csv_type3
+from scatter_plot import make_scatter_plot
 
 def inference(source, case_number, env):
     json_name = "learned\\" + case_number + "_mlp_model_.json"
@@ -29,6 +29,8 @@ def inference(source, case_number, env):
     print('test loss :', score[0])
     print('test accuracy :', score[1])
 
+    y_predict = model.predict(x_test)
+    make_scatter_plot(y_test, y_predict, "CL(Exact)", "CL(Predict)", path="G:\\Toyota\\Data\\Incompressible_Invicid\\fig\\", fname="test")
 
 
 if __name__ == '__main__':
