@@ -31,7 +31,7 @@ def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=100, path="",
         scatter[int(data_scat_a[i]), int(data_scat_b[i])] += 1
 
     imshow = False
-
+    plt.figure()
     if imshow:
         plt.imshow(scatter)
         plt.colorbar()
@@ -43,7 +43,7 @@ def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=100, path="",
     plt.ylabel(label_b)
 
     plt.savefig(path + fname + "_original.png")
-
+    plt.figure()
     if imshow:
         plt.imshow(scatter)
         plt.colorbar()
