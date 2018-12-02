@@ -73,7 +73,7 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
         with tf.Graph().as_default():
             source = "Incompressible_Invicid\\training_data\\"
             if env == "Lab":
-                source = "D:\\Toyota\\Data\\" + source
+                source = "G:\\Toyota\\Data\\" + source
                 case_num = get_case_number(source, env, case_number)
                 log_name = "learned\\" + case_num + "_tb_log.hdf5"
                 json_name = "learned\\" + case_num + "_mlp_model_.json"
