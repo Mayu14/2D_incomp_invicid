@@ -31,6 +31,7 @@ def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=100, path="",
         scatter[int(data_scat_a[i]), int(data_scat_b[i])] += 1
 
     imshow = False
+
     if imshow:
         plt.imshow(scatter)
         plt.colorbar()
@@ -38,11 +39,21 @@ def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=100, path="",
         plt.pcolormesh(label, label, scatter, cmap='jet')
         pp = plt.colorbar(orientation="vertical")
         pp.set_label("Label", fontname="Arial", fontsize=24)
-
     plt.xlabel(label_a)
     plt.ylabel(label_b)
+
+    plt.savefig(path + fname + "_original.png")
+
+    if imshow:
+        plt.imshow(scatter)
+        plt.colorbar()
+    else:
+        plt.pcolormesh(label, label, scatter, cmap='jet')
+    plt.xlabel(label_a)
+    plt.ylabel(label_b)
+
     plt.plot(label, label, color="white", linestyle="dashed")
-    plt.savefig(path + fname + ".png")
+    plt.savefig(path + fname + "_with_center_line.png")
 
 def test():
     def test_func(x, r):
