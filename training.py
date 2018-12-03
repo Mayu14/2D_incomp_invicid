@@ -79,6 +79,8 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
     r_rate = [1, 2, 4, 8]
     # r_rate = [1, 2]
     # r_rate = [4, 8]
+    # r_rate = [16, 32]
+    # r_rate = [64, 160]
     for rr in r_rate:
         if rr == 1:
             s_odd = 0   # 全部読みだす
@@ -113,7 +115,6 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
             if case_type == 3:
                 X_train, y_train = read_csv_type3(source, fname_lift_train, fname_shape_train, shape_odd = s_odd, read_rate = rr)
                 x_test, y_test = read_csv_type3(source, fname_lift_test, fname_shape_test, shape_odd=s_odd, read_rate=rr)
-
             input_vector_dim = X_train.shape[1]
             with tf.name_scope("inference") as scope:
                 model.add(Dense(units=2, input_dim=input_vector_dim))
