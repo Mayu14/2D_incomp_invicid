@@ -61,7 +61,7 @@ def get_case_number(source, env, case_number):
 
 # case_numberから何のデータだったか思い出せない問題が起きたのでファイル名の命名規則を変更する
 # (形状)_(データ数)とする
-def get_case_number_beta(case_number, rr, total_data=200000):
+def get_case_number_beta(case_number, rr, sr, skiptype, shape_data=200, total_data=200000):
     if int(case_number) / 1000 == 0:
         head = "fourierSr"
     elif int(case_number) / 1000 == 1:
@@ -71,17 +71,25 @@ def get_case_number_beta(case_number, rr, total_data=200000):
     else:
         "case number error"
         exit()
-    tail = str(int(total_data / rr))
+    mid1 = str(int(total_data / sr))
+    if skiptype:
+        mid2 = "less_angle"
+    else:
+        mid2 = "less_shape"
+    tail = str(int(shape_data / rr))
 
-    return head + "_" + tail
+    return head + "_" + mid1 + "_" + mid2 + "_" + tail
 
 def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env="Lab"):
     r_rate = [1, 2, 4, 8]
-    s_rate = [1, 2, 4, 8]
+    s_rate = [2, 4, 8]
+    # s_skiptype = [True, False]
+    s_skiptype = True
     # r_rate = [1, 2]
     # r_rate = [4, 8]
     # r_rate = [16, 32]
     # r_rate = [64, 160]
+    
     for sr in s_rate:
         for rr in r_rate:
             if rr == 1:
@@ -98,7 +106,7 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
                 if env == "Lab":
                     source = "G:\\Toyota\\Data\\" + source
                     # case_num = get_case_number(source, env, case_number)
-                    case_num = get_case_number_beta(case_number, rr)
+                    case_num = get_case_number_beta(case_number, rr, sr, s_skiptype)
                     log_name = "learned\\" + case_num + "_tb_log.hdf5"
                     json_name = "learned\\" + case_num + "_mlp_model_.json"
                     weight_name = "learned\\" + case_num + "_mlp_weight.h5"
@@ -115,8 +123,9 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
 
                 model = Sequential()
                 if case_type == 3:
-                    X_train, y_train = read_csv_type3(source, fname_lift_train, fname_shape_train, shape_odd = s_odd, read_rate = rr, skip_rate=sr)
-                    x_test, y_test = read_csv_type3(source, fname_lift_test, fname_shape_test, shape_odd=s_odd, read_rate=rr)
+                    X_train, y_train = read_csv_type3(source, fname_lift_train, fname_shape_train, shape_odd = s_odd, read_rate = rr, skip_rate=sr, skip_angle = s_skiptype)
+                    x_test, y_test = read_csv_type3(source, fname_lift_test, fname_shape_test, shape_odd=s_odd, read_rate = rr)
+
                 input_vector_dim = X_train.shape[1]
                 with tf.name_scope("inference") as scope:
                     model.add(Dense(units=2, input_dim=input_vector_dim))
@@ -158,16 +167,18 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
                 batch_size = 500
                 train_steps, train_batches = batch_iter(X_train, y_train, batch_size)
                 valid_steps, valid_batches = batch_iter(x_test, y_test, batch_size)
-                """
+                #"""
                 model.fit(x=X_train, y=y_train,
                           batch_size=600, nb_epoch=1000,
                           validation_split=0.05, callbacks=[tb_cb])
+                #"""
                 """
                 model.fit_generator(train_batches, train_steps,
                                     epochs=1000,
                                     validation_data=valid_batches,
                                     validation_steps=valid_steps,
                                     callbacks=[tb_cb])
+                """
                 # X_train: [number, angle, shape001, shape002, ..., shapeMAX]
                 # y_train: [number, lift]
                 # 適当に中央付近の翼を抜き出しての-40-38degreeをプロットさせてみる
@@ -183,6 +194,7 @@ def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test,
                 plt.plot(x_test[tekito:tekito+40, 0], y_test[tekito:tekito+40])
                 plt.plot(x_test[tekito:tekito+40, 0], y_predict[tekito:tekito+40])
                 plt.savefig(source + case_num + "_test.png")
+                
                 make_scatter_plot(y_test, y_predict, "CL(Exact)", "CL(Predict)", path="G:\\Toyota\\Data\\Incompressible_Invicid\\fig\\", fname=case_num)
 
 
