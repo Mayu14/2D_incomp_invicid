@@ -38,7 +38,7 @@ def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=100, path="",
     else:
         plt.pcolormesh(label, label, scatter, cmap='jet')
         pp = plt.colorbar(orientation="vertical")
-        pp.set_label("Label", fontname="Arial", fontsize=24)
+        pp.set_label("Number of times", fontname="Arial", fontsize=24)
     plt.xlabel(label_a)
     plt.ylabel(label_b)
 
@@ -49,6 +49,8 @@ def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=100, path="",
         plt.colorbar()
     else:
         plt.pcolormesh(label, label, scatter, cmap='jet')
+        pp = plt.colorbar(orientation = "vertical")
+        pp.set_label("Number of times", fontname = "Arial", fontsize = 24)
     plt.xlabel(label_a)
     plt.ylabel(label_b)
 

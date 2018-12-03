@@ -77,6 +77,8 @@ def get_case_number_beta(case_number, rr, total_data=200000):
 
 def main(fname_lift_train, fname_shape_train, fname_lift_test, fname_shape_test, case_number, case_type=3, env="Lab"):
     r_rate = [1, 2, 4, 8]
+    # r_rate = [1, 2]
+    # r_rate = [4, 8]
     for rr in r_rate:
         if rr == 1:
             s_odd = 0   # 全部読みだす
@@ -200,7 +202,7 @@ if __name__ == '__main__':
 
     # shape_type = input("please set shape_type: 0:fourier, 1:equidistant, 2:dense")
     # for i in range(3):
-    shape_type = str(0)
+    shape_type = str(2)
     fname_lift_train = "NACA4\\s0000_e5000_a040_odd.csv"
     fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
 
