@@ -1,11 +1,19 @@
 # -- coding: utf-8 --
 import pandas as pd
-
-def read_csv_type3(source, fpath_lift, fpath_shape, shape_odd = 0, read_rate = 1):
+import numpy as np
+# source:データの置いてあるディレクトリのパス(絶対or相対)
+# fpath_lift:揚力係数の入ったcsvデータのsourceからの相対パス
+# fpath_shape:形状データの入ったcsvデータのsourceからの相対パス
+# shape_odd:物体形状ベクトルの次元の奇偶等（読み飛ばしに関する変数）
+# read_rate:物体形状ベクトルの次元をread_rateで割った値に変更する
+# skip_rate:揚力係数データ(教師データ)数をskip_rateで割った数に減らす
+def read_csv_type3(source, fpath_lift, fpath_shape, shape_odd = 0, read_rate = 1, total_data=200000, skip_rate = 1):
     name = ("naca4", "angle", "lift_coef")
     data_type = {"naca4": int, "angle":float, "lift_coef":float}
+    skip_row = np.arange(start=0, stop=total_data, step=skip_rate, dtype=int).tolist()
     df_l = pd.read_csv(source + fpath_lift, header=None,
-                     usecols=[1, 3, 4], names=name, dtype=data_type)
+                     usecols=[1, 3, 4], names=name, dtype=data_type,
+                       skiprows=skip_row)
 
     def make_use_cols_for_shape(data, shape_odd, rate):
         # dataは，shapeを何項まで計算したのかによって変更(今回は200固定でよさげ)
@@ -53,7 +61,7 @@ def read_csv_type3(source, fpath_lift, fpath_shape, shape_odd = 0, read_rate = 1
     y_train = df_xy["lift_coef"].values
     X_train = df_xy.drop("lift_coef", axis=1).drop("naca4", axis=1).values
     """
-    X_train = pd.merge(df_l, df_s, on="naca4")
+    X_train = pd.merge(df_l, df_s, on="naca4", how="inner")
     y_train = X_train["lift_coef"].values.reshape(-1, 1)
     X_train = X_train.drop("lift_coef", axis=1).drop("naca4", axis=1).values
     return X_train, y_train
