@@ -7,14 +7,26 @@ import numpy as np
 # shape_odd:物体形状ベクトルの次元の奇偶等（読み飛ばしに関する変数）
 # read_rate:物体形状ベクトルの次元をread_rateで割った値に変更する
 # skip_rate:揚力係数データ(教師データ)数をskip_rateで割った数に減らす
-def read_csv_type3(source, fpath_lift, fpath_shape, shape_odd = 0, read_rate = 1, total_data=200000, skip_rate = 1):
+def read_csv_type3(source, fpath_lift, fpath_shape, shape_odd = 0, read_rate = 1, skip_rate = 4, total_data=200000, angle_data=40, skip_angle=True):
     name = ("naca4", "angle", "lift_coef")
     data_type = {"naca4": int, "angle":float, "lift_coef":float}
-    skip_row = np.arange(start=0, stop=total_data, step=skip_rate, dtype=int).tolist()
-    df_l = pd.read_csv(source + fpath_lift, header=None,
-                     usecols=[1, 3, 4], names=name, dtype=data_type,
-                       skiprows=skip_row)
-
+    
+    def make_skip_rows_for_lift(total_data, angle_data, skip_rate, skip_angle):
+        skip_row = []
+        if skip_angle:  # 角度データを間引く
+            for j in range(total_data):
+                if j % skip_rate != 0:
+                    skip_row.append(j)
+        else:
+            for j in range(total_data):
+                if j % (skip_rate * angle_data) > angle_data - 1:
+                    skip_row.append(j)
+        return skip_row
+    
+    skip_row = make_skip_rows_for_lift(total_data, angle_data, skip_rate, skip_angle)
+    df_l = pd.read_csv(source + fpath_lift, header=None, usecols=[1, 3, 4],
+                       names=name, dtype=data_type, skiprows=skip_row)
+    
     def make_use_cols_for_shape(data, shape_odd, rate):
         # dataは，shapeを何項まで計算したのかによって変更(今回は200固定でよさげ)
         # shape_oddによって全部読む・奇数のみ読む・偶数のみ読む，前半だけ読む、みたいな順番変更
@@ -68,11 +80,12 @@ def read_csv_type3(source, fpath_lift, fpath_shape, shape_odd = 0, read_rate = 1
 
 if __name__ == '__main__':
     # 自宅で作成したのでLaboratory用に書き換える
-    source = "D:\\Dropbox\\shareTH\\program\\keras_training\\"
+    # source = "D:\\Dropbox\\shareTH\\program\\keras_training\\"
+    source = "G:\\Toyota\\Data\\Incompressible_Invicid\\training_data\\"
     # source = "D:\\Toyota\\Dropbox\\shareTH\\program\\laplace\\"
     # ちなみにNACA4とNACA5は基本動作がほぼ一緒だから使い回せるtype3とtype4は同じやり方でok
-    fpath_lift = "sample_lift.csv"
-    fpath_shape = "sample_shape.csv"
+    fpath_lift = "NACA4\\s0000_e5000_a040_odd.csv"
+    fpath_shape = "NACA4\\shape_fourier_5000_odd.csv"
     shape_odd = 0
     read_rate = 1
     read_csv_type3(source, fpath_lift, fpath_shape, shape_odd, read_rate)
