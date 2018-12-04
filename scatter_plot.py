@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=200, path="", fname="scat", log_scale=True):
+def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=200, path="", fname="scat", log_scale=True, dash_line=True):
     size = data_a.shape[0]
     size_b = data_b.shape[0]
     if size != size_b:
@@ -32,7 +32,7 @@ def make_scatter_plot(data_a, data_b, label_a, label_b, resolution=200, path="",
     
     if log_scale:
         scatter += 1
-        scatter = np.log(scatter)
+        scatter = np.log10(scatter)
 
     imshow = False
     plt.figure()
