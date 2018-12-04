@@ -40,10 +40,23 @@ def make_shape_data_for_NACA4DIGIT_fourier(path, data_Number, odd=True):
 
 
 def make_shape_data_for_NACA4DIGIT_equidistant(path, data_Number, odd=True):
-    def plot_test():
-        x = np.linspace(start=-1, stop=1, num=2*resolution)
-        plt.plot(x[:resolution], save_data[wing, 1:half])
-        plt.plot(x[resolution:], save_data[wing, half:])
+    def plot_test(for_poster=False):
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        if for_poster:
+            x_u = np.linspace(start=0, stop=1, num=resolution)[::-1]
+            x_l = np.linspace(start = 0, stop = 1, num = resolution)
+            ax.plot(x_u, save_data[wing, 1:half], ".", color = "mediumspringgreen")
+            ax.plot(x_l, save_data[wing, half:], ".", color = "mediumspringgreen")
+            ax.set_xlim(-0.01, 1.01)
+            ax.set_ylim(-0.2, 0.2)
+            ax.set_title("Equidistnant Sampling (NACA2612)")
+            ax.set_xlabel("x/L")
+            ax.set_ylabel("y/L")
+        else:
+            x = np.linspace(start=-1, stop=1, num=2*resolution)
+            ax.plot(x[:resolution], save_data[wing, 1:half], "x", color="blue")
+            ax.plot(x[resolution:], save_data[wing, half:], "x", color="red")
         plt.show()
         exit()
 
@@ -66,11 +79,13 @@ def make_shape_data_for_NACA4DIGIT_equidistant(path, data_Number, odd=True):
         if ((odd == True) or (nextwing(wing) % 100) == 0):
             save_data[data_id, 0] = float(nextwing(wing))
             naca4 = str(int(nextwing(wing))).zfill(4) # only odd
-    
+            # naca4 = "2612"    # for poster
             naca = Naca_4_digit(int_4=naca4, attack_angle_deg=0.0, resolution=resolution, quasi_equidistant=True, length_adjust=True)
             # 後縁から反時計まわりに格納
             save_data[data_id, 1:half] = naca.equidistant_y_u[::-1] - 0.5
             save_data[data_id, half:] = naca.equidistant_y_l - 0.5
+            wing = data_id
+            # plot_test(True)
             data_id += 1
 
     np.savetxt(fname, save_data, delimiter=",")
@@ -101,26 +116,38 @@ def prepare_for_crowd_front_and_back(len_front, len_back, percent_front, percent
 
 def make_shape_data_for_NACA4DIGIT_crowd_front_and_back(path, data_Number, odd=True, len_front=0.1, len_back=0.15, percent_front=30, percent_back=20):
     # 前縁からlen_front*100%までの位置にpercent_front%の点，後縁からlen_back*100%までの位置にpercent_back%の点を配置する
-    def plot_test():
-        xl = np.linspace(start=-1, stop=0, num=divide_front)
-        xc = np.linspace(start=-1, stop=0, num=divide_center)
-        xb = np.linspace(start=-1, stop=0, num=divide_back)
+    def plot_test(for_poster=False):
+        if for_poster:
+            xl = np.linspace(start = 0, stop = 1, num = divide_front)[::-1]
+            xc = np.linspace(start = 0, stop = 1, num = divide_center)[::-1]
+            xb = np.linspace(start = 0, stop = 1, num = divide_back)[::-1]
+        else:
+            xl = np.linspace(start=-1, stop=0, num=divide_front)
+            xc = np.linspace(start=-1, stop=0, num=divide_center)
+            xb = np.linspace(start=-1, stop=0, num=divide_back)
 
-        plt.plot(xl[divide_front - point_front:],
-                 save_data[wing, point_back + point_center + 1:half], "o")
-
-        plt.plot(xc[front_index + 1:back_index + 1], save_data[wing, point_back + 1:point_back + point_center + 1], "o")
-        plt.plot(xb[:point_back],
-                 save_data[wing, 1:point_back + 1], "o")
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        ax.plot(xl[divide_front - point_front:],
+                 save_data[wing, point_back + point_center + 1:half], ".", label="High Density", color="crimson")
+        ax.plot(xb[:point_back],
+                save_data[wing, 1:point_back + 1], ".", label = "Middle Density", color = "lime")
+        ax.plot(xc[front_index + 1:back_index + 1], save_data[wing, point_back + 1:point_back + point_center + 1], ".", label="Low Density", color="darkblue")
+        
 
         xl = np.linspace(start=0, stop=1, num=divide_front)
         xc = np.linspace(start=0, stop=1, num=divide_center)
         xb = np.linspace(start=0, stop=1, num=divide_back)
-        plt.plot(xl[:point_front], save_data[wing, half:half + point_front], "o")
-        plt.plot(xc[front_index - 1:back_index - 1], save_data[wing, half + point_front:half + point_front + point_center], "o")
-        plt.plot(xb[divide_back - point_back:],
-                 save_data[wing, half + point_front + point_center:2 * half - 1], "o")
-
+        ax.plot(xl[:point_front], save_data[wing, half:half + point_front], ".", color="crimson")
+        ax.plot(xc[front_index - 1:back_index - 1], save_data[wing, half + point_front:half + point_front + point_center], ".", color="darkblue")
+        ax.plot(xb[divide_back - point_back:],
+                 save_data[wing, half + point_front + point_center:2 * half - 1], ".", color="lime")
+        ax.set_xlim(-0.01, 1.01)
+        ax.set_ylim(-0.2, 0.2)
+        ax.set_title("Concentrate Sampling (NACA2612)")
+        ax.set_xlabel("x/L")
+        ax.set_ylabel("y/L")
+        ax.legend(bbox_to_anchor = (0, 1), loc = "upper left", borderaxespad = 1, fontsize = 12)
         plt.show()
         exit()
 
@@ -145,11 +172,11 @@ def make_shape_data_for_NACA4DIGIT_crowd_front_and_back(path, data_Number, odd=T
         if ((odd == True) or (nextwing(wing) % 100 != 0)):
             save_data[data_id, 0] = float(nextwing(wing))
             naca4 = str(int(nextwing(wing))).zfill(4) # only odd
-    
+            naca4 = "2612"  # for poster
             nacaf = Naca_4_digit(int_4=naca4, attack_angle_deg=0.0, resolution=divide_front, quasi_equidistant=True, length_adjust=True)
             nacac = Naca_4_digit(int_4=naca4, attack_angle_deg=0.0, resolution=divide_center, quasi_equidistant=True, length_adjust=True)
             nacab = Naca_4_digit(int_4=naca4, attack_angle_deg=0.0, resolution=divide_back, quasi_equidistant=True, length_adjust=True)
-    
+            
             y_uf = nacaf.equidistant_y_u[::-1] - 0.5
             y_uc = nacac.equidistant_y_u[::-1] - 0.5
             y_ub = nacab.equidistant_y_u[::-1] - 0.5
@@ -161,7 +188,8 @@ def make_shape_data_for_NACA4DIGIT_crowd_front_and_back(path, data_Number, odd=T
                                                      (nacac.equidistant_y_l - 0.5)[front_index - 1:back_index - 1],
                                                      (nacab.equidistant_y_l - 0.5)[divide_back - point_back:]])
             data_id += 1
-            # plot_test()
+            wing = data_id - 1
+            plot_test(True)
     
     np.savetxt(fname, save_data, delimiter=",")
 
@@ -261,11 +289,11 @@ if __name__ == '__main__':
     dataNumber = 200 + 1
     odd = False
     # make_shape_data_for_NACA4DIGIT_fourier(path, dataNumber, odd)
-    # make_shape_data_for_NACA4DIGIT_equidistant(path, dataNumber, odd)
+    make_shape_data_for_NACA4DIGIT_equidistant(path, dataNumber, odd)
     # make_shape_data_for_NACA4DIGIT_crowd_front_and_back(path, dataNumber, odd)
     # make_shape_data_for_NACA5DIGIT_fourier(path, dataNumber)
     # make_shape_data_for_NACA5DIGIT_equidistant(path, dataNumber)
-    make_shape_data_for_NACA5DIGIT_crowd_front_and_back(path, dataNumber)
+    # make_shape_data_for_NACA5DIGIT_crowd_front_and_back(path, dataNumber)
 
     # 没プログラムのコーナー
     # 3つの小数について，丸めた際の最小公倍数が最小になるように切り上げ､切り捨てを判定するプログラム
