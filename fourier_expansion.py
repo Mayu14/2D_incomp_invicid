@@ -51,14 +51,17 @@ class fourier_expansion(object):
         plt.ylim([-0.25, 0.25])
         plt.plot(x_star, decryption)
         plt.show()
-        
-        plt.xlim([0, 1])
-        plt.ylim([-0.25, 0.25])
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        ax.set_title("Fourier Sr. Sampling")
+        ax.set_xlim(-0.01, 1.01)
+        ax.set_ylim(-0.2, 0.2)
         decryption_y_u = decryption[:plot_resolution]
         decryption_y_l = decryption[plot_resolution:][-1::-1]
         x_star = np.linspace(start = 0, stop = 1, num = plot_resolution)
-        plt.plot(x_star, decryption_y_u)
-        plt.plot(x_star, decryption_y_l)
+        ax.plot(x_star, decryption_y_u, ".", color="darkred")
+        ax.plot(x_star, decryption_y_l, ".", color="darkred")
         plt.show()
 
     @jit
@@ -81,8 +84,8 @@ class fourier_expansion(object):
         return decryption
     
 def main():
-    naca = Naca_4_digit(int_4 = "6619", attack_angle_deg = 0, resolution = 100)
-    fex = fourier_expansion(naca.x_u, naca.y_u, naca.x_l, naca.y_l)
+    naca = Naca_4_digit(int_4 = "2612", attack_angle_deg = 0, resolution = 10000)
+    fex = fourier_expansion(naca.x_u, naca.y_u, naca.x_l, naca.y_l, n=200)
     # fex.test_plot_raw_data()
     fex.test_plot_decryption_data()
     # resolution は100あれば十分っぽい
