@@ -95,7 +95,7 @@ def get_circulation(z, complex_U, gamma_output=True):
 
     # solve equation for "gamma" (distribution vertex)
     gamma = np.linalg.solve(A, B)
-    if gamma_output == True:
+    if gamma_output:
         return gamma, (- np.sum(0.5 * (gamma[:size - 1] + gamma[1:]) * len))
     else:
         return (- np.sum(0.5 * (gamma[:size - 1] + gamma[1:]) * len))
@@ -178,6 +178,25 @@ def validation(type, center_x, center_y, complex_U):
     else:   # type == 2:
         print("type error")
         exit()
+
+def zu2circ(z_aoa0, v_in, aoa, deg=False, getLift=True):
+    angle_d = aoa
+    if not deg:
+        angle_d *= 180.0 / np.pi
+
+    complex_U = get_complex_U(inflow_velocity=v_in, attack_angle_degree=angle_d)
+    gamma, circulation = get_circulation(z=z_aoa0, complex_U=complex_U)
+    if getLift:
+        lift = get_lift(density=1.0, circulation=circulation, complex_U=complex_U)
+        lift_coef = get_lift_coefficient(z_aoa0, circulation, complex_U)
+        return lift, lift_coef
+    else:
+        return gamma, circulation
+
+def get_naca_gamma(naca4="0012"):
+    fixed_size = 250
+    z, size = get_complex_coords(type=type, size=fixed_size, naca4=naca4)
+
 
 def main():
     size = 200

@@ -107,10 +107,17 @@ def some_case_test(source, fname_lift_test):
     # mid2_list = ["_less_angle_", "_less_shape_"]
     # tail_rate = [1, 2, 4, 8]
     # tail_total = 200
-    some_case = ["fourierSr_100000_less_shape_200", "fourierSr_50000_less_angle_200", "fourierSr_25000_less_angle_200"]
-    case_name_list_generator(source, fname_lift_test, some_case_test = True, some_case = some_case, scatter = False, anglerplot = True)
+    # some_case = ["fourierSr_100000_less_shape_200", "fourierSr_50000_less_angle_200", "fourierSr_25000_less_angle_200"]
     
-
+    # case_name_list_generator(source, fname_lift_test, some_case_test = True, some_case = some_case, scatter = True, anglerplot = True)
+    #"""
+    some_case = ["fourierSr_200000_less_angle_200"]
+    fname_shape_test = "NACA5\\shape_fourier_all.csv"
+    x_test, y_test = read_csv_type3(source, fname_lift_test, fname_shape_test,
+                                    shape_odd = 0, read_rate = 1)
+    for fname0 in some_case:
+        inference(source, x_test, y_test, fname0, True, True)
+    #"""
 if __name__ == '__main__':
     source = "G:\\Toyota\\Data\\Incompressible_Invicid\\training_data\\"
     fname_lift_test = "NACA5\\s21001_e25199_a040.csv"
